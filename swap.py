@@ -27,15 +27,19 @@ def readbins():
     import csv
     with open('swap_e_bin.dat') as csvfile:
         binreader = csv.reader(csvfile)
-        _, nextlargest, largest = next(binreader)
-        bins = [float(largest), float(nextlargest)]
+        mid, nextlargest, largest = next(binreader)
+        bin_centers = [float(mid)]
+        bin_edges = [float(largest), float(nextlargest)]
         for row in binreader:
-            bins.append(float(row[1]))
+            bin_centers.append(float(row[0]))
+            bin_edges.append(float(row[1]))
 
     # reverse to get bins from low to high
-    return np.array(bins[::-1], dtype=np.float64)
+    bin_centers = np.array(bin_centers[::-1])
+    bin_edges   = np.array(bin_edges[::-1])
+    return bin_centers, bin_edges
 
-bin_edges = readbins()
+bin_centers, bin_edges = readbins()
 Ageom = 0.374 # cm^2
 
 def Rx(a):
