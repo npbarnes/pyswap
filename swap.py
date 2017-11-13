@@ -42,6 +42,7 @@ def readbins():
 bin_centers, bin_edges = readbins()
 Ageom = 2.74e-11 # km^2
 
+"""Pasive rotation matricies used to change coordinate systems"""
 def Rx(a):
     a = radians(a)
     return np.array([   [1.0,0.0,0.0],
@@ -59,16 +60,21 @@ def Rz(a):
                         [0.0,0.0,1.0]])
 
 def R1(o):
+    """Given an orientation o = (theta, phi, spin), R1(o) will be the rotation matrix
+    to convert pluto coordinates into spacecraft coordinates.
+    """
     return np.linalg.multi_dot([Rz(o[1]),Rx(o[0]),Ry(o[2]),Rz(-90)])
 
 def look_vectors(v,o):
-    # Negative of the unit velocity vector in NH coordinates.
+    """Converts velocity vectors to spacecraft look directions"""
+    # Negative of the velocity vector in NH coordinates.
     # The einsum just applies the appropriate rotation matrix to each v.
     # We take the negative since it's the look direction; i.e. the
     # direction to look to see that particle coming in.
     return -np.einsum('ij,kj->ki', R1(o), v)
 
 def look_directions(v, o):
+    """Computes the SWAP look direction phi and theta for each of a collection of ion velocities"""
     l = look_vectors(v,o)
     ret = np.empty((l.shape[0],2), dtype=np.float64)
 
@@ -78,9 +84,11 @@ def look_directions(v, o):
     return ret
 
 def p(phi):
+    """Phi dependance of the SWAP response"""
     return np.interp(phi, IDL.wphi['PHI'], IDL.wphi['W'])
 
 def Eoverq(v,mrat):
+    """Compute energy per charge from velocity and mass ratio (q/m)"""
     ret = np.linalg.norm(v, axis=1)
     np.square(ret, out=ret)
     np.multiply(m_p/e, ret, out=ret)
@@ -92,6 +100,7 @@ def Eoverq(v,mrat):
     return ret
 
 def E(Eoverq, mrat):
+    """Compute energy in eV given energy per charge in eV per electron charge"""
     # multiply by 2 for He++ to give energy in eV for all particles
     He_mask = (mrat == 1./2.)
     ret = np.empty(Eoverq.shape, dtype=np.float64)
@@ -107,6 +116,9 @@ y = IDL.s4['Y'].transpose() # transpose for row-major/column-major conversion
 arr = IDL.s4['ARR'].transpose() # transpose for row-major/column-major conversion
 ecen = IDL.s4['ECEN']
 def w(ee,theta):
+    """Velocity and theta dependance of the SWAP response expressed in terms of energy
+    instead of velocity.
+    """
     # Find the index of the bin center closest to our value for energy and theta
     iee    = np.abs(ee[:,np.newaxis]-ecen[np.newaxis,:]).argmin(axis=1)
     itheta = np.abs(theta[:,np.newaxis]-theta_lab[np.newaxis,:]).argmin(axis=1)
@@ -156,6 +168,7 @@ def Aeff(ee, mrat, scem_voltage=2400.):
     return ret
 
 def swap_resp(ee, l, mrat, orientation):
+    """Compute swap response"""
     A = Ageom*Aeff(ee, mrat)
     ww = w(ee, l[:,1])
     pp = p(l[:,0])
@@ -163,17 +176,20 @@ def swap_resp(ee, l, mrat, orientation):
     return A*ww*pp
 
 def spectrum(v, mrat, n, o):
+    """Generate a spectrum for the given particles and orientation"""
     eq = Eoverq(v,mrat)
     ee = E(eq, mrat)
     l  = look_directions(v, o)
     resp = swap_resp(ee, l, mrat, o)
     nv = n * np.linalg.norm(v, axis=1)
 
+    # Counts due to each individual macro-particle
     counts = nv*resp
 
     return np.histogram(eq, bin_edges, weights=counts)[0]
 
 def spectrogram(x, v, mrat, beta, points, orientations, radius=1187.):
+    """The spectrogram is built out of a spectrum for each given point in space"""
     ret = np.empty((points.shape[0], bin_edges.shape[0]-1), dtype=np.float64)
 
     print('Finding local particles...')
@@ -189,6 +205,7 @@ def spectrogram(x, v, mrat, beta, points, orientations, radius=1187.):
 
 
 def open_stuff(hybrid_folder):
+    """Read datafiles"""
     para = HybridParams.HybridParams(hybrid_folder).para
 
     procnum = int(math.ceil(para['num_proc']/2.0))
@@ -225,9 +242,11 @@ def open_stuff(hybrid_folder):
     return para, xp, vp, mrat, para['beta']*beta_p, tags
 
 def pluto_position(p):
+    """get the position of pluto in simulation coordinates"""
     return p['qx'][p['nx']/2 + p['pluto_offset']]
 
 def trajectory(t1, t2, dt):
+    """Read in New Horizons trajectory and orientation data"""
     times = np.arange(t1,t2,dt)
 
     pos = np.empty((len(times), 3), dtype=np.float64)
