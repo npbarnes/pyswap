@@ -130,7 +130,9 @@ def Aeff(ee, mrat, scem_voltage=2400.):
     H_mask   = ~(He_mask | CH4_mask | N2_mask)
 
     # Build up the complicated formula for efficiency (Valek scem_eff(E)) in a vectorized way without wasting memory.
-    ret = np.sqrt(2*(ee + scem_voltage)/1000.0)
+    # Helium has a charge of 2 while all the others have a charge of 1.
+    ret = np.sqrt(2*(ee + scem_voltage)/1000.0, where=(~He_mask))
+    np.sqrt(2*(ee + 2.*scem_voltage)/1000.0, where=He_mask, out=ret)
 
     # Divide by sqrt of amu for all species (leave H alone since sqrt(1) = 1)
     np.divide(ret, np.sqrt(4),  where=He_mask,  out=ret)
