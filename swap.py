@@ -162,14 +162,12 @@ def swap_resp(ee, l, mrat, orientation):
 
     return A*ww*pp
 
-def spectrum(v, mrat, beta, o, radius=1187.):
-    dV = (4.0/3.0)*np.pi*radius**3
-
+def spectrum(v, mrat, n, o):
     eq = Eoverq(v,mrat)
     ee = E(eq, mrat)
     l  = look_directions(v, o)
     resp = swap_resp(ee, l, mrat, o)
-    nv = np.linalg.norm(v, axis=1)/(dV*beta)
+    nv = n * np.linalg.norm(v, axis=1)
 
     counts = nv*resp
 
@@ -180,10 +178,12 @@ def spectrogram(x, v, mrat, beta, points, orientations, radius=1187.):
 
     print('Finding local particles...')
     local = cdist(points, x) < radius
+    dV = (4./3.)*np.pi*radius**3
+
 
     for i, l in enumerate(local):
         print('Building spectrum {} of {}.'.format(i+1, len(local)))
-        ret[i, :] = spectrum(v[l], mrat[l], beta[l], orientations[i], radius=radius)
+        ret[i, :] = spectrum(v[l], mrat[l], 1./(dV*beta[l]), orientations[i])
 
     return ret
 
