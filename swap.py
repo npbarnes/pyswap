@@ -70,7 +70,7 @@ def look_vectors(v,o):
 
 def look_directions(v, o):
     l = look_vectors(v,o)
-    ret = np.empty((l.shape[0],2))
+    ret = np.empty((l.shape[0],2), dtype=np.float64)
 
     ret[:,0] = np.arctan2(l[:,0],l[:,1])
     ret[:,1] = np.arctan2(l[:,2],np.sqrt(l[:,0]**2 + l[:,1]**2))
@@ -113,13 +113,13 @@ def w(ee,theta):
 
     bin_energies=y[iee,:]*ee[:,np.newaxis]
 
-    ret = np.empty(ee.shape[0])
+    ret = np.empty(ee.shape[0], dtype=np.float64)
     for i in xrange(ret.shape[0]):
         ret[i] = np.interp(ee[i], bin_energies[i], arr[:,itheta[i],iee[i]])
 
     return ret
 
-def Aeff(ee, mrat, scem_voltage=2400):
+def Aeff(ee, mrat, scem_voltage=2400.):
     """Computes the detector efficiency as a function of energy.
     Uses the Valek method. Ignores time dependance.
     ee: particle energy in eV
@@ -174,7 +174,7 @@ def spectrum(v, mrat, beta, o, radius=1187.):
     return np.histogram(eq, bin_edges, weights=counts)[0]
 
 def spectrogram(x, v, mrat, beta, points, orientations, radius=1187.):
-    ret = np.empty((points.shape[0], bin_edges.shape[0]-1))
+    ret = np.empty((points.shape[0], bin_edges.shape[0]-1), dtype=np.float64)
 
     print('Finding local particles...')
     local = cdist(points, x) < radius
@@ -228,8 +228,8 @@ def pluto_position(p):
 def trajectory(t1, t2, dt):
     times = np.arange(t1,t2,dt)
 
-    pos = np.empty((len(times), 3))
-    o   = np.empty((len(times), 3))
+    pos = np.empty((len(times), 3), dtype=np.float64)
+    o   = np.empty((len(times), 3), dtype=np.float64)
 
     for i,t in enumerate(times):
         pos[i,:] = NH_tools.coordinate_at_time(t)
