@@ -40,7 +40,7 @@ def readbins():
     return bin_centers, bin_edges
 
 bin_centers, bin_edges = readbins()
-Ageom = 0.374 # cm^2
+Ageom = 2.74e-11 # km^2
 
 def Rx(a):
     a = radians(a)
