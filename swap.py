@@ -211,12 +211,50 @@ def spectrogram(x, v, mrat, beta, points, orientations, radius=1187., progress=F
     return ret
 
 
-def open_stuff(hybrid_folder):
-    """Read datafiles"""
+def particle_data(hybrid_folder, n=0):
     para = HybridParams.HybridParams(hybrid_folder).para
 
-    procnum = int(math.ceil(para['num_proc']/2.0))
-    maxz = para['qz'][-1]
+    if para['num_proc'] % 2 != 1:
+        raise NotImplemented("Tell Nathan he needs to write the code for concatenating an odd number of processors")
+    else:
+        center = int(math.ceil(para['num_proc']/2.0))
+
+        pp = pluto_position(para)
+
+        x_list = []
+        v_list = []
+        mrat_list = []
+        beta_list = []
+        tags_list = []
+        for offset in (range(-n,n+1) if isinstance(n,int) else n):
+            cur_rank = center+offset
+            from_bottom = para['num_proc'] - (cur_rank+1)
+
+            _, x, v, mrat, beta, tags = read_particle_files(hybrid_folder, cur_rank)
+
+            # Convert processor local coordinate to pluto coordinates
+            x[:,0] -= pp
+            x[:,1] -= np.max(para['qy'])/2
+            x[:,2] += np.max(para['qz'])*from_bottom - from_bottom*para['delz'] - np.max(para['qzrange'])/2
+
+            x_list.append(x)
+            v_list.append(v)
+            mrat_list.append(mrat)
+            beta_list.append(beta)
+            tags_list.append(tags)
+
+        ret_x = np.concatenate(x_list)
+        ret_v = np.concatenate(v_list)
+        ret_mrat = np.concatenate(mrat_list)
+        ret_beta = np.concatenate(beta_list)
+        ret_tags = np.concatenate(tags_list)
+
+    return para, ret_x, ret_v, ret_mrat, ret_beta, ret_tags
+
+
+def read_particle_files(hybrid_folder, procnum):
+    """Read datafiles"""
+    para = HybridParams.HybridParams(hybrid_folder).para
 
     xp_file = ff.FortranFile(join(hybrid_folder,'particle','c.xp_{}.dat'.format(procnum)))
     vp_file = ff.FortranFile(join(hybrid_folder,'particle','c.vp_{}.dat'.format(procnum)))
@@ -230,8 +268,8 @@ def open_stuff(hybrid_folder):
     beta_p_file.seek(0,os.SEEK_END)
     tags_file.seek(0,os.SEEK_END)
 
-    xp = xp_file.readBackReals().reshape(para['Ni_max'], 3, order='F')
-    vp = vp_file.readBackReals().reshape(para['Ni_max'], 3, order='F')
+    xp = xp_file.readBackReals().reshape((-1, 3), order='F')
+    vp = vp_file.readBackReals().reshape((-1, 3), order='F')
     mrat = mrat_file.readBackReals()
     beta_p = beta_p_file.readBackReals()
     tags = tags_file.readBackReals()
@@ -242,11 +280,8 @@ def open_stuff(hybrid_folder):
     beta_p_file.close()
     tags_file.close()
 
-    xp[:,0] -= pluto_position(para)
-    xp[:,1] -= np.max(para['qy'])/2
-    xp[:,2] -= np.max(para['qz'])/2#(((change to plus)))procnum*np.max(para['qz']) - procnum*para['delz']
-
-    return para, xp, vp, mrat, para['beta']*beta_p, tags
+    return (para, xp.astype(np.float64), vp.astype(np.float64), mrat.astype(np.float64),
+                    para['beta']*beta_p.astype(np.float64), tags)
 
 def pluto_position(p):
     """get the position of pluto in simulation coordinates"""
