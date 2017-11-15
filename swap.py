@@ -9,6 +9,7 @@ import NH_tools
 import HybridParams
 import FortranFile as ff
 import math
+from progress import printProgressBar 
 
 # Importing idlpy sets the working directory to the home directory for
 # both Python and IDL interpreters.
@@ -188,18 +189,24 @@ def spectrum(v, mrat, n, o):
 
     return np.histogram(eq, bin_edges, weights=counts)[0]
 
-def spectrogram(x, v, mrat, beta, points, orientations, radius=1187.):
+def spectrogram(x, v, mrat, beta, points, orientations, radius=1187., progress=False):
     """The spectrogram is built out of a spectrum for each given point in space"""
     ret = np.empty((points.shape[0], bin_edges.shape[0]-1), dtype=np.float64)
 
-    print('Finding local particles...')
+    if progress:
+        printProgressBar(0,1)
+
     local = cdist(points, x) < radius
     dV = (4./3.)*np.pi*radius**3
 
 
     for i, l in enumerate(local):
-        print('Building spectrum {} of {}.'.format(i+1, len(local)))
+        if progress:
+            printProgressBar(len(local)+i, 2*len(local))
         ret[i, :] = spectrum(v[l], mrat[l], 1./(dV*beta[l]), orientations[i])
+
+    if progress:
+        printProgressBar(1,1)
 
     return ret
 
