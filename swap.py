@@ -46,17 +46,17 @@ Ageom = 2.74e-11 # km^2
 def Rx(a):
     a = radians(a)
     return np.array([   [1.0,0.0,0.0],
-                        [0.0,cos(a),-sin(a)],
-                        [0.0,sin(a),cos(a)]])
+                        [0.0,cos(a),sin(a)],
+                        [0.0,-sin(a),cos(a)]])
 def Ry(a):
     a = radians(a)
-    return np.array([   [cos(a),0.0,sin(a)],
+    return np.array([   [cos(a),0.0,-sin(a)],
                         [0.0,1.0,0.0],
-                        [-sin(a),0.0,cos(a)]])
+                        [sin(a),0.0,cos(a)]])
 def Rz(a):
     a = radians(a)
-    return np.array([   [cos(a),-sin(a),0.0],
-                        [sin(a),cos(a),0.0],
+    return np.array([   [cos(a),sin(a),0.0],
+                        [-sin(a),cos(a),0.0],
                         [0.0,0.0,1.0]])
 
 def R1(o):
@@ -78,8 +78,8 @@ def look_directions(v, o):
     l = look_vectors(v,o)
     ret = np.empty((l.shape[0],2), dtype=np.float64)
 
-    ret[:,0] = np.arctan2(l[:,0],l[:,1])
-    ret[:,1] = np.arctan2(l[:,2],np.sqrt(l[:,0]**2 + l[:,1]**2))
+    ret[:,0] = np.degrees(np.arctan2(l[:,0],l[:,1]))
+    ret[:,1] = np.degrees(np.arctan2(l[:,2],np.sqrt(l[:,0]**2 + l[:,1]**2)))
 
     return ret
 
