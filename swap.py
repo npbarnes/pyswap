@@ -236,8 +236,8 @@ def spectrograms_by_species(x,v,mrat,beta,points,orientations, radius=1187., pro
 def particle_data(hybrid_folder, n=0):
     para = HybridParams.HybridParams(hybrid_folder).para
 
-    if para['num_proc'] % 2 != 1:
-        raise NotImplemented("Tell Nathan he needs to write the code for concatenating an odd number of processors")
+    if para['num_proc'] % 2 == 0:
+        raise NotImplemented("Tell Nathan he needs to write the code for concatenating an even number of processors")
     else:
         center = int(math.ceil(para['num_proc']/2.0))
 
