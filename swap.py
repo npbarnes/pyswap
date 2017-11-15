@@ -211,17 +211,17 @@ def spectrogram(x, v, mrat, beta, points, orientations, radius=1187., progress=F
     return ret
 
 def spectrograms_by_species(x,v,mrat,beta,points,orientations, radius=1187., progress=False):
-    H_xp = xp[mrat == 1.]
+    H_xp = x[mrat == 1.]
     H_v = v[mrat == 1.]
     H_beta = beta[mrat == 1.]
     H_mrat = mrat[mrat == 1.]
 
-    He_xp = xp[mrat == 1./2.]
+    He_xp = x[mrat == 1./2.]
     He_v = v[mrat == 1./2.]
     He_beta = beta[mrat == 1./2.]
     He_mrat = mrat[mrat == 1./2.]
 
-    CH4_xp = xp[mrat == 1./16.]
+    CH4_xp = x[mrat == 1./16.]
     CH4_v = v[mrat == 1./16.]
     CH4_beta = beta[mrat == 1./16.]
     CH4_mrat = mrat[mrat == 1./16.]
