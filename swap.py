@@ -70,12 +70,16 @@ def look_vectors(v,o):
     return -np.einsum('ij,kj->ki', R1(o), v)
 
 def look_directions(v, o):
-    """Computes the SWAP look direction phi and theta for each of a collection of ion velocities"""
+    """Computes the SWAP look direction phi and theta for each of a collection of ion velocities
+    Returns array of [theta, phi] pairs.
+    """
     l = look_vectors(v,o)
     ret = np.empty((l.shape[0],2), dtype=np.float64)
 
-    ret[:,0] = np.degrees(np.arctan2(l[:,0],l[:,1]))
-    ret[:,1] = np.degrees(np.arctan2(l[:,2],np.sqrt(l[:,0]**2 + l[:,1]**2)))
+    # Theta
+    ret[:,0] = np.degrees(np.arctan2(l[:,2],np.sqrt(l[:,0]**2 + l[:,1]**2)))
+    # Phi
+    ret[:,1] = np.degrees(np.arctan2(l[:,0],l[:,1]))
 
     return ret
 
@@ -166,8 +170,8 @@ def Aeff(ee, mrat, scem_voltage=2400.):
 def swap_resp(ee, l, mrat, orientation):
     """Compute swap response"""
     A = Ageom*Aeff(ee, mrat)
-    ww = w(ee, l[:,1])
-    pp = p(l[:,0])
+    ww = w(ee, l[:,0])
+    pp = p(l[:,1])
 
     return A*ww*pp
 
