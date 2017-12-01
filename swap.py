@@ -83,6 +83,16 @@ def look_directions(v, o):
 
     return ret
 
+sun_dir = np.array([[1.,0.,0.]])
+swap_fov = (10., 276.) # theta, phi
+def is_sunview(o, tolerance=5.):
+    """Determines if the sun is within 5 degrees of any part of the field of view
+    at each orientation. You can change the tolerance with the keyword arg.
+    """
+    theta, phi = look_directions(sun_dir, o).T
+
+    return (np.abs(theta) < swap_fov[0]/2+tolerance) & (np.abs(phi) < swap_fov[1]/2+tolerance)
+
 def p(phi):
     """Phi dependance of the SWAP response"""
     return np.interp(phi, IDL.wphi['PHI'], IDL.wphi['W'])
