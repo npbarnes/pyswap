@@ -77,7 +77,7 @@ def look_directions(v, o):
     ret = np.empty((l.shape[0],2), dtype=np.float64)
 
     # Theta
-    ret[:,0] = np.degrees(np.arctan2(l[:,2],np.sqrt(l[:,0]**2 + l[:,1]**2)))
+    ret[:,0] = np.degrees(-np.arctan2(l[:,2],np.sqrt(l[:,0]**2 + l[:,1]**2)))
     # Phi
     ret[:,1] = np.degrees(np.arctan2(l[:,0],l[:,1]))
 
