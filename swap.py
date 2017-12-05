@@ -95,7 +95,7 @@ def is_sunview(o, tolerance=5.):
 
 def p(phi):
     """Phi dependance of the SWAP response"""
-    return np.interp(phi, IDL.wphi['PHI'], IDL.wphi['W'])
+    return np.interp(phi, IDL.wphi['PHI'], IDL.wphi['W'], left=0., right=0.)
 
 def Eoverq(v,mrat):
     """Compute energy per charge from velocity and mass ratio (q/m)"""
