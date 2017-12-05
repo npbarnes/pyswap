@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import os
 import numpy as np
-from scipy.spatial.distance import cdist
+from scipy import spatial
 from scipy.constants import m_p, e
 from math import sin, cos, radians
 from progress import printProgressBar 
@@ -205,9 +205,11 @@ def spectrogram(x, v, mrat, beta, points, orientations, radius=1187., progress=F
     if progress:
         printProgressBar(0,1)
 
-    local = cdist(points, x) < radius
-    dV = (4./3.)*np.pi*radius**3
+    kdparts  = spatial.cKDTree(x)
+    kdpoints = spatial.cKDTree(points)
+    local = kdpoints.query_ball_tree(kdparts, radius)
 
+    dV = (4./3.)*np.pi*radius**3
 
     for i, l in enumerate(local):
         if progress:
