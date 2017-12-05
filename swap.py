@@ -59,7 +59,7 @@ def R1(o):
     """Given an orientation o = (theta, phi, spin), R1(o) will be the rotation matrix
     to convert pluto coordinates into spacecraft coordinates.
     """
-    return np.linalg.multi_dot([Rz(o[1]),Rx(o[0]),Ry(o[2]),Rz(-90)])
+    return np.linalg.multi_dot([Rz(o[1]),Rx(o[0]),Ry(o[2]),Rz(-90.)])
 
 def look_vectors(v,o):
     """Converts velocity vectors to spacecraft look directions"""
