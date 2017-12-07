@@ -137,7 +137,7 @@ def w(ee,theta):
 
     ret = np.empty(ee.shape[0], dtype=np.float64)
     for i in xrange(ret.shape[0]):
-        ret[i] = np.interp(ee[i], bin_energies[i], arr[:,itheta[i],iee[i]])
+        ret[i] = np.interp(ee[i], bin_energies[i], arr[:,itheta[i],iee[i]], left=0., right=0.)
 
     return ret
 
