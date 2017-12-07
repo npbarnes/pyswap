@@ -21,6 +21,8 @@ para = HybridParams(args.hybrid_folder).para
 
 def pluto_position(p):
     """get the position of pluto in simulation coordinates"""
+    print("grid_profiles: setting pluto_offset to 30 since hpara is wrong")
+    p['pluto_offset'] = 30
     return p['qx'][p['nx']/2 + p['pluto_offset']]
 
 qx = para['qx'] - pluto_position(para)
@@ -51,6 +53,7 @@ pdata = k*ndata*tdata*(100**3)*(1e12) #pressure in pPa
 p_profile = profile(points, grid_points, pdata)
 
 fig, (vax, nax, tax, pax) = plt.subplots(4, sharex=True)
+vax.set_title("Simulation Flyby Profiles", fontsize=1.5*15)
 vax.invert_xaxis()
 vax.set_xlim([-10,-100])
 pax.set_xlabel('X [$R_p$]')
