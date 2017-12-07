@@ -9,23 +9,26 @@ from matplotlib import rcParams
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
-def get_espec(prefix, n, traj=None):
+def get_espec(prefix, n, traj=None, progress=False):
     if traj is None:
         points, o = NH_tools.trajectory(NH_tools.flyby_start, NH_tools.flyby_end, 60.)
     else:
         points, o = traj
 
     para, xp, v, mrat, beta, tags = particle_data(prefix, n)
-
     xp = xp[(tags != 0)]
     v = v[(tags != 0)]
     beta = beta[(tags != 0)]
     mrat = mrat[(tags != 0)]
 
+    H, He, CH4 = spectrograms_by_species(xp, v, mrat, beta, points, o, radius=1187., progress=progress)
 
 
-    H, He, CH4 = spectrograms_by_species(xp, v, mrat, beta, points, o, radius=1187., progress=True)
+    return {'H':H, 'He':He, 'CH4':CH4, 'trajectory':points, 'orientation':o}
 
+def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec):
+
+    H, He, CH4 = espec['H'], espec['He'], espec['CH4']
     # The actual spectrogram to be plotted will be the total response of all species
     tot_spec = H + He + CH4
 
@@ -34,12 +37,11 @@ def get_espec(prefix, n, traj=None):
     mH = np.ma.masked_array(tot_spec, mask=(~((H>He) & (H>CH4))))
     mHe = np.ma.masked_array(tot_spec, mask=(~((He>H) & (He>CH4))))
     mCH4 = np.ma.masked_array(tot_spec, mask=(~((CH4>H) & (CH4>He))))
+#    print("!!!!!!!!!!!!!!!!!! Changing the masks around !!!!!!!!!!!!!!!!!!!!!")
+#    mH = np.ma.masked_array(tot_spec, mask=((He >= H) | (CH4 !=0)))
+#    mHe = np.ma.masked_array(tot_spec, mask=((H > He) | (CH4 !=0)))
+#    mCH4 = np.ma.masked_array(tot_spec, mask=(CH4 == 0))
 
-    return {'H':mH, 'He':mHe, 'CH4':mCH4, 'trajectory':points, 'orientation':o}
-
-def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec):
-
-    mH, mHe, mCH4 = espec['H'], espec['He'], espec['CH4']
     points = espec['trajectory']
 
     # Plot the masked arrays
@@ -65,6 +67,8 @@ def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec):
 def plot_traj_context(fig, ax_xy, ax_xz, prefix, traj, size, mccomas=False):
     hybrid_np_CH4 = hr(prefix, 'up')
     np_3d = hybrid_np_CH4.get_timestep(-1)[-1][:,:,:,0]
+#    hh.direct_plot(fig, ax_xy, np_3d, hybrid_np_CH4.para, 'xy', norm=LogNorm(), fontsize=size, mccomas=mccomas)
+#    hh.direct_plot(fig, ax_xz, np_3d, hybrid_np_CH4.para, 'xz', norm=LogNorm(), fontsize=size, mccomas=mccomas)
     hh.direct_plot(fig, ax_xy, np_3d, hybrid_np_CH4.para, 'xy', norm=None, fontsize=size, mccomas=mccomas)
     hh.direct_plot(fig, ax_xz, np_3d, hybrid_np_CH4.para, 'xz', norm=None, fontsize=size, mccomas=mccomas)
 
@@ -82,13 +86,13 @@ def three_colorbars(fig, ax):
 
     # Setup colorbar axes
     spec_pos = ax.get_position()
-    cbar_CH4 = fig.add_axes([spec_pos.x1+.01, spec_pos.y0+.01, 0.1/3, spec_pos.height-.02])
+    cbar_CH4 = fig.add_axes([spec_pos.x1+.01, spec_pos.y0+(1./6.)*spec_pos.height, 0.1/3, (2./3.)*spec_pos.height])
 
     cbar_CH4_pos = cbar_CH4.get_position()
-    cbar_He = fig.add_axes([cbar_CH4_pos.x1, spec_pos.y0+.01, 0.1/3, spec_pos.height-.02])
+    cbar_He = fig.add_axes([cbar_CH4_pos.x1, spec_pos.y0+(1./6.)*spec_pos.height, 0.1/3, (2./3.)*spec_pos.height])
 
     cbar_He_pos = cbar_He.get_position()
-    cbar_H = fig.add_axes([cbar_He_pos.x1, spec_pos.y0+.01, 0.1/3,spec_pos.height-.02])
+    cbar_H = fig.add_axes([cbar_He_pos.x1, spec_pos.y0+(1./6.)*spec_pos.height, 0.1/3, (2./3.)*spec_pos.height])
 
     return cbar_H, cbar_He, cbar_CH4
 
@@ -102,7 +106,7 @@ if __name__ == '__main__':
 
     points, o = NH_tools.trajectory(NH_tools.flyby_start, NH_tools.flyby_end, 60.)
     plot_traj_context(fig, ax1, ax2, "/home/nathan/data/2017-Mon-Nov-13/pluto-8/data", points, fontsize, mccomas=True)
-    ax1.set_xlim([-45, ax1.get_xlim()[1]])
+    #ax1.set_xlim([-45, ax1.get_xlim()[1]])
 
     fig.suptitle("Heavy Ion Density", fontsize=1.5*fontsize)
 
