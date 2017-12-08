@@ -22,12 +22,12 @@ import cPickle
 points, o = NH_tools.trajectory(NH_tools.flyby_start, NH_tools.flyby_end, 30.)
 
 if args.high:
-    high_IMF_espec = get_espec("/home/nathan/data/2017-Mon-Nov-13/pluto-7/data", range(-6,6), traj=(points, o))
+    high_IMF_espec = get_espec("/home/nathan/data/2017-Mon-Nov-13/pluto-7/data", range(-11,11), traj=(points, o))
     with open('high_IMF_espec.pickle', 'w') as f:
         cPickle.dump(high_IMF_espec, f)
 
 if args.low:
-    low_IMF_espec  = get_espec("/home/nathan/data/2017-Mon-Nov-13/pluto-8/data", range(-8,11), traj=(points, o))
+    low_IMF_espec  = get_espec("/home/nathan/data/2017-Mon-Nov-13/pluto-8/data", range(-11,11), traj=(points, o))
     with open('low_IMF_espec.pickle', 'w') as f:
         cPickle.dump(low_IMF_espec, f)
 
