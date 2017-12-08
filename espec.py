@@ -26,7 +26,7 @@ def get_espec(prefix, n, traj=None, progress=False):
 
     return {'H':H, 'He':He, 'CH4':CH4, 'trajectory':points, 'orientation':o}
 
-def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec):
+def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec, mccomas=False):
 
     H, He, CH4 = espec['H'], espec['He'], espec['CH4']
     # The actual spectrogram to be plotted will be the total response of all species
@@ -37,12 +37,15 @@ def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec):
     mH = np.ma.masked_array(tot_spec, mask=(~((H>He) & (H>CH4))))
     mHe = np.ma.masked_array(tot_spec, mask=(~((He>H) & (He>CH4))))
     mCH4 = np.ma.masked_array(tot_spec, mask=(~((CH4>H) & (CH4>He))))
-#    print("!!!!!!!!!!!!!!!!!! Changing the masks around !!!!!!!!!!!!!!!!!!!!!")
+#    print("!!!!!!!!!!!!!!!!!! Changing masks to any CH4 !!!!!!!!!!!!!!!!!!!!!")
 #    mH = np.ma.masked_array(tot_spec, mask=((He >= H) | (CH4 !=0)))
 #    mHe = np.ma.masked_array(tot_spec, mask=((H > He) | (CH4 !=0)))
 #    mCH4 = np.ma.masked_array(tot_spec, mask=(CH4 == 0))
 
     points = espec['trajectory']
+
+    if mccomas:
+        points[:,0] = -points[:,0]
 
     # Plot the masked arrays
     Hhist = ax.pcolormesh(points[:,0]/1187., bin_centers, mH.T, norm=LogNorm(), cmap='Blues',
@@ -60,7 +63,9 @@ def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec):
 
     # add a title
     Hecb.ax.set_title('SCEM (Hz)', fontdict={'fontsize':'small'})
-    ax.invert_xaxis()
+
+    if not mccomas:
+        ax.invert_xaxis()
 
     ax.set_yscale('log')
 
