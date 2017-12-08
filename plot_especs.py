@@ -22,8 +22,8 @@ from espec import three_colorbars, plot_espec
 def plot(filename, title, espec, fontsize=15):
     fig, ax = plt.subplots(figsize=(rcParams['figure.figsize'][0], 0.7*rcParams['figure.figsize'][1]))
     cbar_H, cbar_He, cbar_CH4 = three_colorbars(fig, ax)
-    plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec)
-    ax.set_xlim([20,-125])
+    plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec, mccomas=True)
+    ax.set_xlim([-20,105])
 
     ax.set_title(title, fontsize=1.5*fontsize)
     ax.set_xlabel('X ($R_p$)', fontsize=fontsize)
