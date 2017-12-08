@@ -35,7 +35,7 @@ def plot(filename, title, espec, fontsize=15):
 if args.high:
     with open('high_IMF_espec.pickle') as f:
         high_IMF_espec = cPickle.load(f)
-    plot('high_IMF_syth_spec.png', "Synthetic SWAP Spectrogram\n0.3nT IMF", high_IMF_espec)
+    plot('high_IMF_synth_spec.png', "Synthetic SWAP Spectrogram\n0.3nT IMF", high_IMF_espec)
 
 if args.low:
     with open('low_IMF_espec.pickle') as f:
