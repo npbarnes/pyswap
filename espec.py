@@ -75,7 +75,8 @@ def plot_traj_context(fig, ax_xy, ax_xz, prefix, traj, size, mccomas=False):
 #    hh.direct_plot(fig, ax_xy, np_3d, hybrid_np_CH4.para, 'xy', norm=LogNorm(), fontsize=size, mccomas=mccomas)
 #    hh.direct_plot(fig, ax_xz, np_3d, hybrid_np_CH4.para, 'xz', norm=LogNorm(), fontsize=size, mccomas=mccomas)
     hh.direct_plot(fig, ax_xy, np_3d, hybrid_np_CH4.para, 'xy', norm=None, fontsize=size, mccomas=mccomas)
-    hh.direct_plot(fig, ax_xz, np_3d, hybrid_np_CH4.para, 'xz', norm=None, fontsize=size, mccomas=mccomas)
+    hundred_Rp = np.argmin(hybrid_np_CH4.para['qx']/1187. - 100.)
+    hh.direct_plot(fig, ax_xz, np_3d, hybrid_np_CH4.para, 'yz', norm=None, fontsize=size, mccomas=mccomas, depth=hundred_Rp)
 
     traj = traj/1187.
 
@@ -83,7 +84,13 @@ def plot_traj_context(fig, ax_xy, ax_xz, prefix, traj, size, mccomas=False):
         traj[:,0] = -traj[:,0]
         traj[:,1] = -traj[:,1]
     ax_xy.plot(traj[:,0], traj[:,1], color='black', linewidth=2, scalex=False, scaley=False)
-    ax_xz.plot(traj[:,0], traj[:,2], color='black', linewidth=2, scalex=False, scaley=False)
+    y = traj[:, 1]
+    z = traj[:, 2]
+    ax_xz.plot(y, z, color='black', linewidth=2, scalex=False, scaley=False)
+
+    hundred_Rp2 = np.argmin(np.abs(traj[:,0] - 100.))
+    ax_xz.plot([traj[hundred_Rp2,1]], [traj[hundred_Rp2,2]], marker='o', markersize=3, color='red')
+    ax_xy.plot([traj[hundred_Rp2,0]], [traj[hundred_Rp2,1]], marker='o', markersize=3, color='red')
 
 
 def three_colorbars(fig, ax):
