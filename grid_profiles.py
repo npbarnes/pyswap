@@ -14,6 +14,7 @@ assert unit('Boltzmann constant') == 'J K^-1'
 
 parser = argparse.ArgumentParser()
 parser.add_argument('hybrid_folder')
+parser.add_argument('--mccomas', action='store_true')
 args = parser.parse_args()
 
 para = HybridParams(args.hybrid_folder).para
@@ -54,9 +55,11 @@ p_profile = profile(points, grid_points, pdata)
 
 fig, (vax, nax, tax, pax) = plt.subplots(4, sharex=True)
 vax.set_title("Simulation Flyby Profiles", fontsize=1.5*15)
-vax.invert_xaxis()
-vax.set_xlim([-10,-100])
+
 pax.set_xlabel('X [$R_p$]')
+
+if args.mccomas:
+    points[:,0] = -points[:,0]
 
 vax.plot(points[:,0]/1187., v_profile)
 nax.plot(points[:,0]/1187., n_profile)
@@ -71,6 +74,12 @@ pax.set_ylabel('nkT [pPa]')
 nax.set_yscale('log')
 tax.set_yscale('log')
 pax.set_yscale('log')
+
+if args.mccomas:
+    vax.set_xlim([10,100])
+else:
+    vax.invert_xaxis()
+    vax.set_xlim([-10,-100])
 
 plt.show()
 
