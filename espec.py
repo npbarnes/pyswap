@@ -9,9 +9,11 @@ from matplotlib import rcParams
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
-def get_espec(prefix, n, traj=None, progress=False):
+def get_espec(prefix, n, traj=None, progress=False, times=None):
     if traj is None:
-        points, o = NH_tools.trajectory(NH_tools.flyby_start, NH_tools.flyby_end, 60.)
+        points, o, times = NH_tools.trajectory2(NH_tools.flyby_start, NH_tools.flyby_end, 30.)
+        points[:,0] = np.linspace(10.*1187., -60.*1187., len(points[:,0]))
+        points[:,(1,2)] = 0.
     else:
         points, o = traj
 
@@ -24,9 +26,9 @@ def get_espec(prefix, n, traj=None, progress=False):
     H, He, CH4 = spectrograms_by_species(xp, v, mrat, beta, points, o, radius=1187., progress=progress)
 
 
-    return {'H':H, 'He':He, 'CH4':CH4, 'trajectory':points, 'orientation':o}
+    return {'H':H, 'He':He, 'CH4':CH4, 'trajectory':points, 'orientation':o, 'times':times}
 
-def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec, mccomas=False):
+def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec, mccomas=False, timeaxis=False):
 
     H, He, CH4 = espec['H'], espec['He'], espec['CH4']
     # The actual spectrogram to be plotted will be the total response of all species
@@ -42,19 +44,23 @@ def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec, mccomas=False):
 #    mHe = np.ma.masked_array(tot_spec, mask=((H > He) | (CH4 !=0)))
 #    mCH4 = np.ma.masked_array(tot_spec, mask=(CH4 == 0))
 
-    points = espec['trajectory']
+    if timeaxis:
+        axis = espec['times']
+    else:
+        axis = espec['trajectory'][:,0]/1187.
 
-    if mccomas:
-        points[:,0] = -points[:,0]
+    if mccomas and not timeaxis:
+        axis = -axis
 
     # Plot the masked arrays
-    Hhist = ax.pcolormesh(points[:,0]/1187., bin_centers, mH.T, norm=LogNorm(), cmap='Blues',
+    print(axis.shape)
+    Hhist = ax.pcolormesh(axis, bin_centers, mH.T, norm=LogNorm(), cmap='Blues',
             vmin=2e-3, vmax=2e4)
 
-    Hehist = ax.pcolormesh(points[:,0]/1187., bin_centers, mHe.T, norm=LogNorm(), cmap='Greens',
+    Hehist = ax.pcolormesh(axis, bin_centers, mHe.T, norm=LogNorm(), cmap='Greens',
             vmin=2e-3, vmax=2e4)
 
-    CH4hist = ax.pcolormesh(points[:,0]/1187., bin_centers, mCH4.T, norm=LogNorm(), cmap='Reds',
+    CH4hist = ax.pcolormesh(axis, bin_centers, mCH4.T, norm=LogNorm(), cmap='Reds',
             vmin=2e-3, vmax=2e4)
 
     Hcb = fig.colorbar(Hhist, cax=cbar_H)
@@ -70,28 +76,37 @@ def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec, mccomas=False):
     ax.set_yscale('log')
 
 def plot_traj_context(fig, ax_xy, ax_xz, prefix, traj, size, mccomas=False):
-    hybrid_np_CH4 = hr(prefix, 'up')
-    np_3d = hybrid_np_CH4.get_timestep(-1)[-1][:,:,:,0]
-#    hh.direct_plot(fig, ax_xy, np_3d, hybrid_np_CH4.para, 'xy', norm=LogNorm(), fontsize=size, mccomas=mccomas)
-#    hh.direct_plot(fig, ax_xz, np_3d, hybrid_np_CH4.para, 'xz', norm=LogNorm(), fontsize=size, mccomas=mccomas)
-    hh.direct_plot(fig, ax_xy, np_3d, hybrid_np_CH4.para, 'xy', norm=None, fontsize=size, mccomas=mccomas)
-    hundred_Rp = np.argmin(hybrid_np_CH4.para['qx']/1187. - 100.)
-    hh.direct_plot(fig, ax_xz, np_3d, hybrid_np_CH4.para, 'yz', norm=None, fontsize=size, mccomas=mccomas, depth=hundred_Rp)
+    hybrid_np_CH4 = hr(prefix, 'np_CH4')
+    np_3d = hybrid_np_CH4.get_timestep(-1)[-1]
+    hh.direct_plot(fig, ax_xy, np_3d, hybrid_np_CH4.para, 'xy', norm=LogNorm(), fontsize=size, mccomas=mccomas)
+    hh.direct_plot(fig, ax_xz, np_3d, hybrid_np_CH4.para, 'xz', norm=LogNorm(), fontsize=size, mccomas=mccomas)
 
     traj = traj/1187.
 
     if mccomas:
         traj[:,0] = -traj[:,0]
         traj[:,1] = -traj[:,1]
-    ax_xy.plot(traj[:,0], traj[:,1], color='black', linewidth=2, scalex=False, scaley=False)
+
+    x = traj[:, 0]
     y = traj[:, 1]
     z = traj[:, 2]
-    ax_xz.plot(y, z, color='black', linewidth=2, scalex=False, scaley=False)
+    ax_xy.plot(x, y, color='black', linewidth=2, scalex=False, scaley=False)
+    ax_xz.plot(x, z, color='black', linewidth=2, scalex=False, scaley=False)
 
-    hundred_Rp2 = np.argmin(np.abs(traj[:,0] - 100.))
-    ax_xz.plot([traj[hundred_Rp2,1]], [traj[hundred_Rp2,2]], marker='o', markersize=3, color='red')
-    ax_xy.plot([traj[hundred_Rp2,0]], [traj[hundred_Rp2,1]], marker='o', markersize=3, color='red')
+def plot_one_traj_context(fig, ax_xy, prefix, traj, size, mccomas=False):
+    hybrid_np_CH4 = hr(prefix, 'np_CH4')
+    np_3d = hybrid_np_CH4.get_timestep(-1)[-1]
+    hh.direct_plot(fig, ax_xy, np_3d, hybrid_np_CH4.para, 'xy', norm=LogNorm(), fontsize=size, mccomas=mccomas)
 
+    traj = traj/1187.
+
+    if mccomas:
+        traj[:,0] = -traj[:,0]
+        traj[:,1] = -traj[:,1]
+
+    x = traj[:, 0]
+    y = traj[:, 1]
+    ax_xy.plot(x, y, color='black', linewidth=2, scalex=False, scaley=False)
 
 def three_colorbars(fig, ax):
     fig.subplots_adjust(right=0.8, hspace=0.05)
@@ -108,7 +123,25 @@ def three_colorbars(fig, ax):
 
     return cbar_H, cbar_He, cbar_CH4
 
-if __name__ == '__main__':
+if __name__ == '__main__': # just xy traj context
+    fontsize = 20
+
+    fig, ax1 = plt.subplots()
+
+    ax1.set_aspect('equal')
+
+    points, o = NH_tools.trajectory(NH_tools.flyby_start, NH_tools.flyby_end, 60.)
+    plot_one_traj_context(fig, ax1, "/home/nathan/data/2017-Mon-Nov-13/pluto-8/data", points, fontsize, mccomas=True)
+    ax1.set_xlim([-30, ax1.get_xlim()[1]])
+    ax1.set_ylim([-50,50])
+
+    ax1.set_title("Heavy Ion Density", fontsize=1.5*fontsize)
+
+    plt.tight_layout(rect=[0,0.03,1,0.9])
+    #plt.tight_layout()
+    plt.show()
+
+if __name__ == '__pain__': # xy, xz traj context
     fontsize = 20
 
     fig, (ax1,ax2) = plt.subplots(ncols=2, sharex=True, figsize=(2.2*rcParams['figure.figsize'][0], rcParams['figure.figsize'][1]))
@@ -118,7 +151,7 @@ if __name__ == '__main__':
 
     points, o = NH_tools.trajectory(NH_tools.flyby_start, NH_tools.flyby_end, 60.)
     plot_traj_context(fig, ax1, ax2, "/home/nathan/data/2017-Mon-Nov-13/pluto-8/data", points, fontsize, mccomas=True)
-    #ax1.set_xlim([-45, ax1.get_xlim()[1]])
+    ax1.set_xlim([-30, ax1.get_xlim()[1]])
 
     fig.suptitle("Heavy Ion Density", fontsize=1.5*fontsize)
 

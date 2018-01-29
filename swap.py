@@ -202,6 +202,10 @@ def spectrogram(x, v, mrat, beta, points, orientations, radius=1187., progress=F
     """The spectrogram is built out of a spectrum for each given point in space"""
     ret = np.empty((points.shape[0], bin_edges.shape[0]-1), dtype=np.float64)
 
+    if len(x) == 0:
+        ret[:,:] = 0
+        return ret
+
     if progress:
         printProgressBar(0,1)
 
