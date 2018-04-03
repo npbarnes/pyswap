@@ -62,8 +62,8 @@ vax.set_xlabel('X [$R_p$]')
 if args.mccomas:
     points[:,0] = -points[:,0]
 
-#vax.plot(points[:,0]/1187., high_profile, label='0.3nT')
-#vax.plot(points[:,0]/1187., low_profile, label='0.08nT')
+vax.plot(points[:,0]/1187., high_profile, label='0.3nT')
+vax.plot(points[:,0]/1187., low_profile, label='0.08nT')
 vax.plot([-12.7,3.8,8.8,13.1,18.9,158.7,175.2],[400.,365.,324.,250.,140.,320.,400.], marker='o', linestyle='None', label='Data', color='C2')
 vax.legend()
 
