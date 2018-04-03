@@ -53,7 +53,6 @@ def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec, mccomas=False, timeaxi
         axis = -axis
 
     # Plot the masked arrays
-    print(axis.shape)
     Hhist = ax.pcolormesh(axis, bin_centers, mH.T, norm=LogNorm(), cmap='Blues',
             vmin=2e-3, vmax=2e4)
 
