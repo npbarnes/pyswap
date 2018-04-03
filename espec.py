@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import numpy as np
 import NH_tools
-from swap import spectrograms_by_species, bin_centers, is_sunview
+from swap import spectrograms_by_species, bin_centers, bin_edges, is_sunview
 from HybridReader2 import HybridReader2 as hr
 import HybridHelper as hh
 from HybridParticleReader import particle_data
@@ -28,6 +28,30 @@ def get_espec(prefix, n, traj=None, progress=False, times=None):
 
     return {'H':H, 'He':He, 'CH4':CH4, 'trajectory':points, 'orientation':o, 'times':times}
 
+def plot_onespec(fig, ax, espec):
+    H, He, CH4 = espec['H'], espec['He'], espec['CH4']
+    # The actual spectrogram to be plotted will be the total response of all species
+    tot_spec = H + He + CH4
+
+
+    axis = espec['trajectory'][:,0]/1187.
+    ax.pcolormesh(range(len(tot_spec)), bin_centers, tot_spec.T, norm=LogNorm(),
+            vmin=2e-3, vmax=2e4)
+    ax.set_yscale('log')
+
+    plt.figure()
+    bin_widths = bin_edges[1:] - bin_edges[:-1]
+    plt.hist(bin_centers, bins=bin_edges, weights=tot_spec[100,:], log=True)
+    plt.gca().set_xscale('log')
+
+    plt.figure()
+    plt.plot(bin_centers, tot_spec[100,:])
+    plt.gca().set_xscale('log')
+    plt.gca().set_yscale('log')
+
+    plt.show()
+
+    
 def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec, mccomas=False, timeaxis=False):
 
     H, He, CH4 = espec['H'], espec['He'], espec['CH4']
