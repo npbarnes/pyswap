@@ -27,8 +27,6 @@ low_para = HybridParams(args.low).para
 
 def pluto_position(p):
     """get the position of pluto in simulation coordinates"""
-    print("grid_profiles: setting pluto_offset to 30 since hpara is wrong")
-    p['pluto_offset'] = 30
     return p['qx'][p['nx']/2 + p['pluto_offset']]
 
 def get_grid_points(para):
