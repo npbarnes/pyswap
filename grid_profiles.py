@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+import os
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from scipy.constants import value, unit
@@ -13,10 +14,16 @@ k = value('Boltzmann constant')
 assert unit('Boltzmann constant') == 'J K^-1'
 
 parser = argparse.ArgumentParser()
-parser.add_argument('hybrid_folder')
 parser.add_argument('--mccomas', action='store_true')
+parser.add_argument('--hybrid-folder', dest='hybrid_folder', default=None)
 parser.add_argument('-b', action='store_true')
+parser.add_argument('--prefix', default='data')
 args = parser.parse_args()
+
+if args.hybrid_folder is None:
+    args.hybrid_folder = os.path.join(os.getcwd(), args.prefix)
+else:
+    args.hybrid_folder = os.path.join(args.hybrid_folder, args.prefix)
 
 para = HybridParams(args.hybrid_folder).para
 

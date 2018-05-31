@@ -7,15 +7,18 @@ parser.add_argument('--medium', action='store_true',
         help='Generate the medium IMF spectrogram and not the others')
 parser.add_argument('--low', action='store_true', 
         help='Generate the low IMF spectrogram and not the others')
+parser.add_argument('--rehearsal', action='store_true', 
+        help='Generate the rehearsal spectrogram and not the others')
 parser.add_argument('--other', action='store_true')
-parser.add_argument('--total-counts', action='store_true')
+parser.add_argument('--show', action='store_true')
 
 args = parser.parse_args()
 
-if not args.high and not args.medium and not args.low and not args.other:
+if not args.high and not args.medium and not args.low and not args.other and not args.rehearsal:
     args.high = True
     args.medium  = True
     args.low  = True
+    args.rehearsal = True
 
 import cPickle
 from matplotlib import rcParams
@@ -51,7 +54,10 @@ def plot(filename, title, espec, fontsize=15):
     ax.set_ylabel('Energy/Q (eV/q)', fontsize=fontsize)
     ax.tick_params(axis='both', which='major', labelsize=0.7*fontsize)
 
-    fig.savefig(filename, bbox_inches='tight')
+    if args.show:
+        plt.show()
+    else:
+        fig.savefig(filename, bbox_inches='tight')
 
 if args.high:
     with open('high_IMF_espec.pickle') as f:
@@ -67,6 +73,11 @@ if args.low:
     with open('low_IMF_espec.pickle') as f:
         low_IMF_espec = cPickle.load(f)
     plot('low_IMF_synth_spec.png', "Synthetic SWAP Spectrogram\n0.08nT IMF", low_IMF_espec)
+
+if args.rehearsal:
+    with open('rehearsal_espec.pickle') as f:
+        rehearsal_espec = cPickle.load(f)
+    plot('rehearsal_synth_spec.png', "Synthetic SWAP Spectrogram\nRehearsal", rehearsal_espec)
 
 if args.other:
     with open('other_espec.pickle') as f:
