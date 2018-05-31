@@ -5,7 +5,7 @@ from scipy.constants import value, unit
 from HybridReader2 import HybridReader2 as hr
 from HybridParams import HybridParams
 import matplotlib.pyplot as plt
-import NH_tools
+import spice_tools
 import argparse
 
 eV2J = value('Boltzmann constant in eV/K')
@@ -40,7 +40,7 @@ def profile(interp_points, grid_points, grid_data):
     rgi = RegularGridInterpolator(points=grid_points, values=grid_data, bounds_error=False)
     return rgi(interp_points)
 
-points, o = NH_tools.trajectory(NH_tools.close_start, NH_tools.close_end, 60.)
+points, o, times = spice_tools.trajectory(spice_tools.flyby_start, spice_tools.flyby_end, 60.)
 
 v = hr(args.hybrid_folder,'up').get_last_timestep()[-1]
 vdata = np.linalg.norm(v, axis=-1)

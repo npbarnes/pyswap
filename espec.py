@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
-import NH_tools
+import spice_tools
 from swap import spectrograms_by_species, bin_centers, bin_edges, is_sunview
 from HybridReader2 import HybridReader2 as hr
 import HybridHelper as hh
@@ -9,13 +9,11 @@ from matplotlib import rcParams
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
-def get_espec(prefix, n, traj=None, progress=False, times=None):
+def get_espec(prefix, n, traj=None, progress=False, times=None, radius=1187.):
     if traj is None:
-        points, o, times = NH_tools.trajectory2(NH_tools.flyby_start, NH_tools.flyby_end, 30.)
-        points[:,0] = np.linspace(10.*1187., -60.*1187., len(points[:,0]))
-        points[:,(1,2)] = 0.
+        points, cmats, times = spice_tools.trajectory(spice_tools.flyby_start, spice_tools.flyby_end, 30.)
     else:
-        points, o = traj
+        points, cmats = traj
 
     para, xp, v, mrat, beta, tags = particle_data(prefix, n)
     xp = xp[(tags != 0)]
@@ -23,10 +21,11 @@ def get_espec(prefix, n, traj=None, progress=False, times=None):
     beta = beta[(tags != 0)]
     mrat = mrat[(tags != 0)]
 
-    H, He, CH4 = spectrograms_by_species(xp, v, mrat, beta, points, o, radius=1187., progress=progress)
+    #H, He, CH4 = spectrograms_by_species(xp, v, mrat, beta, points, cmats, radius=0.5*1187., progress=progress)
+    H, He, CH4 = spectrograms_by_species(xp, v, mrat, beta, points, cmats, radius=radius, progress=progress)
 
 
-    return {'H':H, 'He':He, 'CH4':CH4, 'trajectory':points, 'orientation':o, 'times':times}
+    return {'H':H, 'He':He, 'CH4':CH4, 'trajectory':points, 'orientation':cmats, 'times':times}
 
 def plot_onespec(fig, ax, espec):
     H, He, CH4 = espec['H'], espec['He'], espec['CH4']

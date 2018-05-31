@@ -16,11 +16,10 @@ if not args.high and not args.medium and not args.low and not args.other:
     args.medium  = True
     args.low  = True
 
-import NH_tools
+import spice_tools
 from espec import get_espec
 import cPickle
-
-points, o = NH_tools.trajectory(NH_tools.flyby_start, NH_tools.flyby_end, 30.)
+import numpy as np
 
 if args.high:
     high_IMF_espec = get_espec("/home/nathan/data/2017-Mon-Nov-13/pluto-7/data", range(-11,11), traj=(points, o))

@@ -4,6 +4,8 @@ import numpy as np
 from scipy import spatial
 from scipy.constants import m_p, e
 from math import sin, cos, radians
+from spice_tools import look_directions
+from spiceypy import timout
 from progress import printProgressBar 
 
 # Importing idlpy sets the working directory to the home directory for
@@ -35,53 +37,44 @@ def readbins():
     bin_edges   = np.array(bin_edges[::-1])
     return bin_centers, bin_edges
 
+def extract_spectrogram(fit_file):
+    pcem = np.zeros((fit_file['pcem_spect_hz'].data.shape[0], 2*fit_file['pcem_spect_hz'].data.shape[1]))
+    scem = np.zeros_like(pcem)
+    coin = np.zeros_like(pcem)
+    pcem[:,::2] = fit_file['pcem_spect_hz'].data
+    scem[:,::2] = fit_file['scem_spect_hz'].data
+    coin[:,::2] = fit_file['coin_spect_hz'].data
+
+    start_times = fit_file['time_label_spect'].data['start_et']
+    stop_times  = fit_file['time_label_spect'].data['stop_et']
+    start_stop_times = np.zeros(2*start_times.shape[0])
+    start_stop_times[::2] = start_times
+    start_stop_times[1::2] = stop_times
+
+    energies = fit_file['energy_label_spect'].data[0][2:]
+
+    return pcem, scem, coin, start_stop_times, energies
+
+def find_data(start_et, end_et):
+    #TODO
+    raise NotImplemented
+    encounter_folder = 'nh-p-swap-3-pluto-v3.0/data'
+    cruise_folder = 'nh-x-swap-3-plutocruise-v3.0/data'
+
+    start_date = timout(start_et, 'YYYYMMDD::UTC')
+    end_date = timout(end_et, 'YYYYMMDD::UTC')
+    # For now only support reading from one folder at a time
+    assert start_date == end_date
+#    if start_date > end_date:
+#        raise ValueError("Start must come before end")
+#    if start_date < 20080528:
+#        raise ValueError("Start date falls before the Pluto cuise mission phase.")
+#    if end_date > 20161025:
+#        raise ValueError("End date falls after the Pluto encounter mission phase.")
+    
+
 bin_centers, bin_edges = readbins()
 Ageom = 2.74e-11 # km^2
-
-"""Pasive rotation matricies used to change coordinate systems"""
-def Rx(a):
-    a = radians(a)
-    return np.array([   [1.0,0.0,0.0],
-                        [0.0,cos(a),sin(a)],
-                        [0.0,-sin(a),cos(a)]])
-def Ry(a):
-    a = radians(a)
-    return np.array([   [cos(a),0.0,-sin(a)],
-                        [0.0,1.0,0.0],
-                        [sin(a),0.0,cos(a)]])
-def Rz(a):
-    a = radians(a)
-    return np.array([   [cos(a),sin(a),0.0],
-                        [-sin(a),cos(a),0.0],
-                        [0.0,0.0,1.0]])
-
-def R1(o):
-    """Given an orientation o = (theta, phi, spin), R1(o) will be the rotation matrix
-    to convert pluto coordinates into spacecraft coordinates.
-    """
-    return np.linalg.multi_dot([Rz(o[1]),Rx(o[0]),Ry(o[2]),Rz(-90.)])
-
-def look_vectors(v,o):
-    """Converts velocity vectors to spacecraft look directions"""
-    # Negative of the velocity vector in NH coordinates.
-    # The einsum just applies the appropriate rotation matrix to each v.
-    # We take the negative since it's the look direction; i.e. the
-    # direction to look to see that particle coming in.
-    return -np.einsum('ij,kj->ki', R1(o), v)
-
-def look_directions(v, o):
-    """Computes the SWAP look direction phi and theta for each of a collection of ion velocities
-    Returns array of [theta, phi] pairs.
-    """
-    l = look_vectors(v,o)
-    ret = np.empty((l.shape[0],2), dtype=np.float64)
-
-    # Theta
-    ret[:,0] = np.degrees(-np.arctan2(l[:,2],np.sqrt(l[:,0]**2 + l[:,1]**2)))
-    # Phi
-    ret[:,1] = np.degrees(np.arctan2(l[:,0],l[:,1]))
-
-    return ret
 
 sun_dir = np.array([[1.,0.,0.]])
 swap_fov = (10., 276.) # theta, phi
@@ -177,7 +170,7 @@ def Aeff(ee, mrat, scem_voltage=2400.):
 
     return ret
 
-def swap_resp(ee, l, mrat, orientation):
+def swap_resp(ee, l, mrat):
     """Compute swap response"""
     A = Ageom*Aeff(ee, mrat)
     ww = w(ee, l[:,0])
@@ -190,7 +183,7 @@ def spectrum(v, mrat, n, o):
     eq = Eoverq(v,mrat)
     ee = E(eq, mrat)
     l  = look_directions(v, o)
-    resp = swap_resp(ee, l, mrat, o)
+    resp = swap_resp(ee, l, mrat)
     nv = n * np.linalg.norm(v, axis=1)
 
     # Counts due to each individual macro-particle
