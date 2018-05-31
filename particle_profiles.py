@@ -1,61 +1,54 @@
 import numpy as np
-from scipy.spatial.distance import cdist
-import NH_tools
-from HybridParticleReader import particle_data
+from scipy import spatial
+import spice_tools
+from HybridParticleReader import LastStep
 
 import matplotlib.pyplot as plt
-#from matplotlib import rcParams
-#from matplotlib.colors import LogNorm
 
 def profile(f):
-    def wrapped(local, *args, **kwargs):
-        ret = np.empty(len(local))
+    def wrapped(traj, particles, radius=1187.):
+        kdparts  = spatial.cKDTree(particles.x)
+        kdpoints = spatial.cKDTree(traj)
+        local = kdpoints.query_ball_tree(kdparts, radius)
 
-        for i, l in enumerate(local):
-            if np.any(l):
-                ret[i] = f(l, *args, **kwargs)
-            else:
-                ret[i] = 0.
+        first = f(particles.filter(local[0]), radius=radius)
+        ret = np.zeros((len(local),)+first.shape)
+        ret[0] = first
+
+        for i, l in enumerate(local[1:]):
+            # i+1 since we already did the first entry when getting the dimensions for ret
+            ret[i+1] = f(particles.filter(l), radius=radius) 
 
         return ret
 
     return wrapped
 
 @profile
-def bulk_velocity(l, v, beta):
-    ave_velocity = np.average(v[l,:], weights=1./beta[l], axis=0)
-    return np.linalg.norm(ave_velocity)
+def bulk_velocity(p, radius):
+    return np.average(p.v, weights=1./p.beta, axis=0)
 
 @profile
-def density(l, beta, radius=1187.):
+def density(p, radius):
     dV = 4./3. * np.pi * radius**3
-    return np.sum(1./beta[l])/dV
+    return 1e-15*np.sum(1./p.beta)/dV
 
-@profile
-def temperature(l, v, mrat, beta
+if __name__ == '__main__':
+    # No Shell
+    #hybrid_folder = '/home/nathan/data/2018-Thu-Jan-25/pluto-2'
+    # large box
+    hybrid_folder = '/home/nathan/data/2017-Mon-Nov-13/pluto-8'
+    data_folder = 'data'
+    n=7
+    p = LastStep(hybrid_folder, n, data_folder=data_folder)
+    #p.filter(p.tags != 0, out=p)
 
+    traj, cmats, times = spice_tools.trajectory(spice_tools.flyby_start, spice_tools.flyby_end, 60.)
 
+    d = density(traj, p, radius=1187./2.)
 
-print("Reading particle data...")
-para, xp, v, mrat, beta, tags = particle_data('/home/nathan/data/pluto-2/databig', n=2)
-xp = xp[(tags != 0)]
-v = v[(tags != 0)]
-beta = beta[(tags != 0)]
-mrat = mrat[(tags != 0)]
+    plt.plot(traj[:,0]/1187., d)
 
-print("Loading trajectory information...")
-points, o = NH_tools.trajectory(NH_tools.close_start, NH_tools.close_end, 60.)
+    plt.gca().invert_xaxis()
+    plt.gca().set_xlim([-10,-100])
 
-radius = 1187.
-
-print("Finding local particles...")
-local = cdist(points, xp) < radius
-
-profile = bulk_velocity(local, v, beta)
-
-plt.plot(points[:,0]/1187., profile)
-
-plt.show()
-
-
-
+    plt.show()
