@@ -138,13 +138,16 @@ def Aeff(ee, mrat, scem_voltage=2400.):
     """Computes the detector efficiency as a function of energy.
     Uses the Valek method. Ignores time dependance.
     ee: particle energy in eV
+
+    Valek scem efficiency formula:
+    \frac{\sqrt{2 \frac{(ee + q V)}{1000}}}{\sqrt{m}}
     """
     He_mask  = (mrat==1./2.)
     CH4_mask = (mrat==1./16.)
     N2_mask  = (mrat==1./28.)
     H_mask   = ~(He_mask | CH4_mask | N2_mask)
 
-    # Build up the complicated formula for efficiency (Valek scem_eff(E)) in a vectorized way without wasting memory.
+    # Build up the complicated formula for efficiency (Valek scem_eff(E), see above) in a vectorized way without wasting memory.
     # Helium has a charge of 2 while all the others have a charge of 1.
     ret = np.sqrt(2*(ee + scem_voltage)/1000.0, where=(~He_mask))
     np.sqrt(2*(ee + 2.*scem_voltage)/1000.0, where=He_mask, out=ret)
