@@ -17,13 +17,13 @@ os.chdir(cwd)
 IDL.cd(cwd)
 
 # Load SWAP calibration information
-IDL.restore('fin_arr_ebea_ang_eb_bg_corr.sav')
-IDL.restore('w_phi.sav')
-IDL.restore('prob_scem_parm.sav')
+IDL.restore('/home/nathan/Code/swap/fin_arr_ebea_ang_eb_bg_corr.sav')
+IDL.restore('/home/nathan/Code/swap/w_phi.sav')
+IDL.restore('/home/nathan/Code/swap/prob_scem_parm.sav')
 
 def readbins():
     import csv
-    with open('swap_e_bin.dat') as csvfile:
+    with open('/home/nathan/Code/swap/swap_e_bin.dat') as csvfile:
         binreader = csv.reader(csvfile)
         mid, nextlargest, largest = next(binreader)
         bin_centers = [float(mid)]
