@@ -56,7 +56,3 @@ if args.other is not None:
     other_espec = get_espec(args.other, range(-7,7))
     with open('other_espec.pickle', 'w') as f:
         cPickle.dump(other_espec, f)
-
-
-
-
