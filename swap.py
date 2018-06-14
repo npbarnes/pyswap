@@ -173,13 +173,17 @@ def Aeff(ee, mrat, scem_voltage=2400.):
 
     return ret
 
+def transmission(ee, l):
+    ww = w(ee, l[:,0])
+    pp = p(l[:,1])
+    return ww*pp
+
 def swap_resp(ee, l, mrat):
     """Compute swap response"""
     A = Ageom*Aeff(ee, mrat)
-    ww = w(ee, l[:,0])
-    pp = p(l[:,1])
+    T = transmission(ee, l)
 
-    return A*ww*pp
+    return A*T
 
 def spectrum(v, mrat, n, o):
     """Generate a spectrum for the given particles and orientation"""
