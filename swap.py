@@ -4,9 +4,12 @@ import numpy as np
 from scipy import spatial
 from scipy.constants import m_p, e
 from math import sin, cos, radians
-from spice_tools import look_directions
+from spice_tools import look_directions, et2pydatetime, met2pydatetime
 from spiceypy import timout
 from progress import printProgressBar 
+from bisect import bisect_right
+from astropy.io import fits
+from datetime import datetime
 
 # Importing idlpy sets the working directory to the home directory for
 # both Python and IDL interpreters.
@@ -20,6 +23,9 @@ IDL.cd(cwd)
 IDL.restore('/home/nathan/Code/swap/fin_arr_ebea_ang_eb_bg_corr.sav')
 IDL.restore('/home/nathan/Code/swap/w_phi.sav')
 IDL.restore('/home/nathan/Code/swap/prob_scem_parm.sav')
+
+encounter_folder = '/home/nathan/Code/swap/nh-p-swap-3-pluto-v3.0/data'
+cruise_folder = '/home/nathan/Code/swap/nh-x-swap-3-plutocruise-v3.0/data'
 
 def readbins():
     import csv
@@ -37,41 +43,72 @@ def readbins():
     bin_edges   = np.array(bin_edges[::-1])
     return bin_centers, bin_edges
 
-def extract_spectrogram(fit_file):
-    pcem = np.zeros((fit_file['pcem_spect_hz'].data.shape[0], 2*fit_file['pcem_spect_hz'].data.shape[1]))
-    scem = np.zeros_like(pcem)
-    coin = np.zeros_like(pcem)
-    pcem[:,::2] = fit_file['pcem_spect_hz'].data
-    scem[:,::2] = fit_file['scem_spect_hz'].data
-    coin[:,::2] = fit_file['coin_spect_hz'].data
+def extract_spectrogram(fit_file, preprocess='simple'):
+    if preprocess == 'start_stop':
+        pcem = np.zeros((fit_file['pcem_spect_hz'].data.shape[0], 2*fit_file['pcem_spect_hz'].data.shape[1]))
+        scem = np.zeros_like(pcem)
+        coin = np.zeros_like(pcem)
+        pcem[:,::2] = fit_file['pcem_spect_hz'].data
+        scem[:,::2] = fit_file['scem_spect_hz'].data
+        coin[:,::2] = fit_file['coin_spect_hz'].data
 
-    start_times = fit_file['time_label_spect'].data['start_et']
-    stop_times  = fit_file['time_label_spect'].data['stop_et']
-    start_stop_times = np.zeros(2*start_times.shape[0])
-    start_stop_times[::2] = start_times
-    start_stop_times[1::2] = stop_times
+        start_times = fit_file['time_label_spect'].data['start_et']
+        stop_times  = fit_file['time_label_spect'].data['stop_et']
+        times = np.zeros(2*start_times.shape[0])
+        times[::2] = start_times
+        times[1::2] = stop_times
+
+    elif preprocess == 'simple_spectra':
+        pcem = fit_file['pcem_spect_hz'].data
+        scem = fit_file['scem_spect_hz'].data
+        coin = fit_file['coin_spect_hz'].data
+        times = fit_file['time_label_spect'].data['middle_et']
+
+    elif preprocess == 'None':
+        pcem = fit_file['pcem_spect_hz'].data
+        scem = fit_file['scem_spect_hz'].data
+        coin = fit_file['coin_spect_hz'].data
+        times = fit_file['time_label_spect'].data
+
+    else:
+        raise ValueError("The argument preprocess must be one of: 'simple_spectra', 'start_stop', or 'None'")
 
     energies = fit_file['energy_label_spect'].data[0][2:]
+    return pcem, scem, coin, times, energies
 
-    return pcem, scem, coin, start_stop_times, energies
+def _extract_date(item):
+    # extract the date; i.e. first eight digits of the folder name
+    # Since it's in the order YYYYMMDD we can compare them as integers
+    return int(os.path.basename(item)[:8])
 
-def find_data(start_et, end_et):
-    #TODO
-    raise NotImplemented
-    encounter_folder = 'nh-p-swap-3-pluto-v3.0/data'
-    cruise_folder = 'nh-x-swap-3-plutocruise-v3.0/data'
+def _find_nearest_before(folders, target_date):
+    b = [_extract_date(item) for item in folders]
+    target = int(target_date.strftime('%Y%m%d'))
+    i = bisect_right(b,target)
+    if i:
+        return folders[i-1]
+    raise ValueError("No folder comes before or on that date")
 
-    start_date = timout(start_et, 'YYYYMMDD::UTC')
-    end_date = timout(end_et, 'YYYYMMDD::UTC')
-    # For now only support reading from one folder at a time
-    assert start_date == end_date
-#    if start_date > end_date:
-#        raise ValueError("Start must come before end")
-#    if start_date < 20080528:
-#        raise ValueError("Start date falls before the Pluto cuise mission phase.")
-#    if end_date > 20161025:
-#        raise ValueError("End date falls after the Pluto encounter mission phase.")
+def find_fit_file(start_et):
+    start_date = et2pydatetime(start_et)
+
+    if start_date < datetime(year=2015, month=01, day=15):
+        mission_phase = cruise_folder
+    else:
+        mission_phase = encounter_folder
+
+    date_folders = [os.path.join(mission_phase, d) for d in os.listdir(mission_phase) if os.path.isdir(os.path.join(mission_phase, d))]
+    date_folders.sort(key=_extract_date)
+
+    found = _find_nearest_before(date_folders, start_date)
     
+    data_file, = [os.path.join(found,f) for f in os.listdir(found) if f.endswith('.fit')]
+
+    return fits.open(data_file)
+
+def find_spectrogram(start_et, preprocess='simple'):
+    return extract_spectrogram( find_fit_file(start_et), preprocess=preprocess)
+
 
 bin_centers, bin_edges = readbins()
 Ageom = 2.74e-11 # km^2
