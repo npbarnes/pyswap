@@ -22,6 +22,9 @@ points, _, _ = spice_tools.trajectory(spice_tools.flyby_start, spice_tools.flyby
 def vmag(v):
     return np.linalg.norm(v, axis=-1)
 
+def vx(v):
+    return v[0]
+
 def n_km(n):
     return n*1e-15
 
@@ -69,10 +72,10 @@ def pressure_profile(hf, step=-1):
     p_therm = profile(points, grid_points, thermal_p_data)
     p_b     = profile(points, grid_points, bdata)
 
-    return zip(p_therm, p_b)
+    return zip(p_therm, p_b, p_therm+p_b)
 
 
-def main(profile_func, title='Flyby Profile', labels=[], xlabel='', ylabel=''):
+def main(profile_func, title=None, labels=[], xlabel='', ylabel=''):
     import argparse
 
     # Some usage stuff
@@ -87,10 +90,17 @@ def main(profile_func, title='Flyby Profile', labels=[], xlabel='', ylabel=''):
     parser.add_argument('--hybrid-folder', dest='hybrid_folder', default=None)
     parser.add_argument('--prefix', default='data')
     parser.add_argument('--step', type=int, default=-1)
-    parser.add_argument('--xlim', type=limitType, nargs=2, default=[10,100])
-    parser.add_argument('--ylim', type=limitType, nargs=2, default=[0.008,1.1])
+    parser.add_argument('--xlim', type=limitType, nargs=2, default=[-30,150])
+    parser.add_argument('--ylim', type=limitType, nargs=2, default=[8e-4,3.5])
+    parser.add_argument('--imf')
+    parser.add_argument('--save', action='store_true')
 
     args = parser.parse_args()
+
+    if args.imf is None:
+        args.imf = ''
+    else:
+        args.imf = '\n' + args.imf + ' IMF'
 
     if args.hybrid_folder is None:
         args.hybrid_folder = os.path.join(os.getcwd(), args.prefix)
@@ -112,7 +122,11 @@ def main(profile_func, title='Flyby Profile', labels=[], xlabel='', ylabel=''):
     ax.legend(loc='best')
     ax.set_yscale('log')
 
-    ax.set_title(title)
+    if title is None:
+        ax.set_title('Pressure Profiles{}'.format(args.imf))
+    else:
+        ax.set_title(title)
+
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
 
@@ -125,10 +139,13 @@ def main(profile_func, title='Flyby Profile', labels=[], xlabel='', ylabel=''):
     ax.set_ylim(*args.ylim)
 
 
-    plt.savefig(os.path.join(args.hybrid_folder,'../pressure.png'))
+    if args.save:
+        plt.savefig(os.path.join(args.hybrid_folder,'../pressure.png'), bbox_inches='tight')
+    else:
+        plt.show()
 
 
 if __name__ == '__main__':
     #main(density_profile)
     plt.style.use('pluto-paper')
-    main(pressure_profile, title='Pressure Profiles\n0.19nT', labels=('Thermal Pressure','Magnetic Pressure'), xlabel='X ($R_p$)', ylabel='Pressure (pPa)')
+    main(pressure_profile, labels=('Thermal Pressure','Magnetic Pressure', 'Total Pressure'), xlabel='X ($R_p$)', ylabel='Pressure (pPa)')
