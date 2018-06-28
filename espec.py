@@ -51,7 +51,7 @@ def plot_onespec(fig, ax, espec):
     plt.show()
 
     
-def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec, mccomas=False, timeaxis=False):
+def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec, mccomas=False, rehearsal=False):
 
     H, He, CH4 = espec['H'], espec['He'], espec['CH4']
     # The actual spectrogram to be plotted will be the total response of all species
@@ -67,12 +67,12 @@ def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec, mccomas=False, timeaxi
 #    mHe = np.ma.masked_array(tot_spec, mask=((H > He) | (CH4 !=0)))
 #    mCH4 = np.ma.masked_array(tot_spec, mask=(CH4 == 0))
 
-    if timeaxis:
-        axis = espec['times']
+    if rehearsal: # Use time axis instead of position
+        axis = [spice_tools.et2pydatetime(et) for et in espec['times']]
     else:
         axis = espec['trajectory'][:,0]/1187.
 
-    if mccomas and not timeaxis:
+    if mccomas and not rehearsal:
         axis = -axis
 
     # Plot the masked arrays
@@ -82,15 +82,22 @@ def plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec, mccomas=False, timeaxi
     Hehist = ax.pcolormesh(axis, bin_centers, mHe.T, norm=LogNorm(), cmap='Greens',
             vmin=2e-3, vmax=2e4)
 
-    CH4hist = ax.pcolormesh(axis, bin_centers, mCH4.T, norm=LogNorm(), cmap='Reds',
-            vmin=2e-3, vmax=2e4)
+    if not rehearsal: # There are no heavies in the rehearsal
+        CH4hist = ax.pcolormesh(axis, bin_centers, mCH4.T, norm=LogNorm(), cmap='Reds',
+                vmin=2e-3, vmax=2e4)
 
     Hcb = fig.colorbar(Hhist, cax=cbar_H)
     Hecb = fig.colorbar(Hehist, cax=cbar_He, format="")
-    CH4cb = fig.colorbar(CH4hist, cax=cbar_CH4, format="")
+    if not rehearsal: # There are no heavies in the rehearsal
+        CH4cb = fig.colorbar(CH4hist, cax=cbar_CH4, format="")
 
-    # add a title
-    Hecb.ax.set_title('SCEM (Hz)', fontdict={'fontsize':'small'})
+    # add a colorbar title
+    cb_pos = Hecb.ax.get_position()
+    if rehearsal:
+        center = cb_pos.xmax
+    else:
+        center = (cb_pos.xmin + cb_pos.xmax)/2
+    fig.text(center+0.005, cb_pos.ymax+0.01, "SCEM (Hz)", horizontalalignment='center', fontsize=15)
 
     if not mccomas:
         ax.invert_xaxis()
@@ -130,20 +137,22 @@ def plot_one_traj_context(fig, ax_xy, prefix, traj, size, mccomas=False):
     y = traj[:, 1]
     ax_xy.plot(x, y, color='black', linewidth=2, scalex=False, scaley=False)
 
-def three_colorbars(fig, ax):
-    fig.subplots_adjust(right=0.8, hspace=0.05)
+def three_colorbars(fig, ax, fraction=0.2, pad=0.01):
+    return N_colorbars(fig, ax, 3, fraction, pad)
 
-    # Setup colorbar axes
+def N_colorbars(fig, ax, N, fraction=0.2, pad=0.01):
+    fig.subplots_adjust(right=1-fraction)
+
     spec_pos = ax.get_position()
-    cbar_CH4 = fig.add_axes([spec_pos.x1+.01, spec_pos.y0+(1./6.)*spec_pos.height, 0.1/3, (2./3.)*spec_pos.height])
+    first_cbar = fig.add_axes([spec_pos.xmax+pad, spec_pos.ymin+(1./6.)*spec_pos.height, fraction/2/N, (2./3.)*spec_pos.height])
 
-    cbar_CH4_pos = cbar_CH4.get_position()
-    cbar_He = fig.add_axes([cbar_CH4_pos.x1, spec_pos.y0+(1./6.)*spec_pos.height, 0.1/3, (2./3.)*spec_pos.height])
+    cbars = [first_cbar]
+    for i in range(1,N):
+        prev_pos = cbars[i-1].get_position()
+        cbars.append(fig.add_axes([prev_pos.xmax, spec_pos.ymin+(1./6.)*spec_pos.height, fraction/2/N, (2./3.)*spec_pos.height]))
 
-    cbar_He_pos = cbar_He.get_position()
-    cbar_H = fig.add_axes([cbar_He_pos.x1, spec_pos.y0+(1./6.)*spec_pos.height, 0.1/3, (2./3.)*spec_pos.height])
+    return cbars
 
-    return cbar_H, cbar_He, cbar_CH4
 
 if __name__ == '__main__': # just xy traj context
     fontsize = 20

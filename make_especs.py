@@ -48,7 +48,7 @@ if args.rehearsal:
     points[:,0] = np.linspace(300.0*1187.0,-270*1187.0,points.shape[0])
     points[:,1] = 0.0
     points[:,2] = 0.0
-    rehearsal_espec = get_espec("/home/nathan/data/2018-Mon-Apr-30/pluto-1/data", [0,1], traj=(points,cmats), radius=1187./4.)
+    rehearsal_espec = get_espec("/home/nathan/data/2018-Mon-Apr-30/pluto-1/data", [0,1], traj=(points,cmats), radius=1187./4., times=times)
     with open('rehearsal_espec.pickle', 'w') as f:
         cPickle.dump(rehearsal_espec, f)
 

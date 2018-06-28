@@ -23,36 +23,53 @@ if not args.high and not args.medium and not args.low and not args.other and not
 import cPickle
 from matplotlib import rcParams
 import matplotlib.pyplot as plt
-from espec import three_colorbars, plot_espec, plot_onespec
-from NH_tools import et_formatter
+from matplotlib.dates import HourLocator, MinuteLocator, DateFormatter
+from matplotlib.figure import figaspect
+from matplotlib.ticker import MultipleLocator
+from espec import N_colorbars, plot_espec, plot_onespec
+import spice_tools
 
 def one_plot(filename, title, espec, fontsize=15):
     fig, ax = plt.subplots()
     plot_onespec(fig, ax, espec)
 
-def time_plot(filename, title, espec, fontsize=15):
-    fig, ax = plt.subplots(figsize=(rcParams['figure.figsize'][0], 0.7*rcParams['figure.figsize'][1]))
-    cbar_H, cbar_He, cbar_CH4 = three_colorbars(fig, ax)
-    plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec, mccomas=True, timeaxis=True)
+def plot(filename, title, espec, rehearsal=False):
+    plt.style.use('pluto-paper')
+    rcParams['figure.autolayout'] = False # autolayout (default True in pluto-paper style) breaks these plots
 
-    ax.set_title(title, fontsize=1.5*fontsize)
-    ax.set_xlabel('Time', fontsize=fontsize)
-    ax.xaxis.set_major_formatter(et_formatter)
-    ax.set_ylabel('Energy/Q (eV/q)', fontsize=fontsize)
-    ax.tick_params(axis='both', which='major', labelsize=0.7*fontsize)
+    fig, ax = plt.subplots(figsize=figaspect(0.3))
+    if rehearsal:
+        cbar_CH4 = None
+        cbar_He, cbar_H = N_colorbars(fig, ax, 2, fraction=0.1)
+    else:
+        cbar_CH4, cbar_He, cbar_H = N_colorbars(fig, ax, 3, fraction=0.1)
 
-    fig.savefig(filename, bbox_inches='tight')
+    plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec, mccomas=True, rehearsal=rehearsal)
 
-def plot(filename, title, espec, fontsize=15):
-    fig, ax = plt.subplots(figsize=(rcParams['figure.figsize'][0], 0.7*rcParams['figure.figsize'][1]))
-    cbar_H, cbar_He, cbar_CH4 = three_colorbars(fig, ax)
-    plot_espec(fig, ax, cbar_H, cbar_He, cbar_CH4, espec, mccomas=True)
-    ax.set_xlim([-20,105])
+    ax.set_ylabel('Energy/Q (eV/q)')
 
-    ax.set_title(title, fontsize=1.5*fontsize)
-    ax.set_xlabel('X ($R_p$)', fontsize=fontsize)
-    ax.set_ylabel('Energy/Q (eV/q)', fontsize=fontsize)
-    ax.tick_params(axis='both', which='major', labelsize=0.7*fontsize)
+    if rehearsal:
+        ax.set_title(title)
+        ax.set_xlabel('Time (UTC)')
+        ax.xaxis.set_major_locator(HourLocator())
+        ax.xaxis.set_major_formatter(DateFormatter('%H:%M'))
+        ax.xaxis.set_minor_locator(MinuteLocator(byminute=range(0,60,10)))
+
+    else:
+        ax.set_title(title, pad=50)
+        ax.set_xlabel('Time (UTC)')
+        ax.set_xlabel('X ($R_p$)')
+        ax.xaxis.set_major_locator(MultipleLocator(50))
+        ax.xaxis.set_minor_locator(MultipleLocator(10))
+        ax.set_xlim([-20,105])
+
+        time_axis = ax.twiny()
+        time_axis.set_xlim(spice_tools.et2pydatetime(espec['times'][0]), 
+                           spice_tools.et2pydatetime(espec['times'][-1]))
+        time_axis.set_xlabel('Time (UTC)')
+        time_axis.xaxis.set_major_locator(HourLocator())
+        time_axis.xaxis.set_major_formatter(DateFormatter('%H:%M'))
+        time_axis.xaxis.set_minor_locator(MinuteLocator(byminute=range(0,60,10)))
 
     if args.show:
         plt.show()
@@ -77,7 +94,7 @@ if args.low:
 if args.rehearsal:
     with open('rehearsal_espec.pickle') as f:
         rehearsal_espec = cPickle.load(f)
-    plot('rehearsal_synth_spec.png', "Synthetic SWAP Spectrogram\nRehearsal", rehearsal_espec)
+    plot('rehearsal_synth_spec.png', "Synthetic SWAP Rehearsal Spectrogram", rehearsal_espec, rehearsal=True)
 
 if args.other:
     with open('other_espec.pickle') as f:
