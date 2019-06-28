@@ -3,10 +3,8 @@ import os
 import numpy as np
 from scipy import spatial
 from scipy.constants import m_p, e
-from math import sin, cos, radians
-from spice_tools import look_directions, et2pydatetime, met2pydatetime
-from spiceypy import timout
-from progress import printProgressBar 
+from spice_tools import look_directions, et2pydatetime
+from progress import printProgressBar
 from bisect import bisect_right
 from astropy.io import fits
 from datetime import datetime
@@ -15,7 +13,7 @@ from datetime import datetime
 # both Python and IDL interpreters.
 # These lines are a workaround to unstupid that behavior.
 cwd = os.getcwd()
-from idlpy import IDL
+from idlpy import IDL # noqa
 os.chdir(cwd)
 IDL.cd(cwd)
 
@@ -101,7 +99,7 @@ def find_fit_file(start_et):
     date_folders.sort(key=_extract_date)
 
     found = _find_nearest_before(date_folders, start_date)
-    
+
     data_file, = [os.path.join(found,f) for f in os.listdir(found) if f.endswith('.fit')]
 
     return fits.open(data_file)
@@ -172,7 +170,7 @@ def w(ee,theta):
     return ret
 
 def Aeff(ee, mrat, scem_voltage=2400.):
-    """Computes the detector efficiency as a function of energy.
+    r"""Computes the detector efficiency as a function of energy.
     Uses the Valek method. Ignores time dependance.
     ee: particle energy in eV
 
@@ -184,6 +182,12 @@ def Aeff(ee, mrat, scem_voltage=2400.):
     N2_mask  = (mrat==1./28.)
     H_mask   = ~(He_mask | CH4_mask | N2_mask)
 
+    pe = 0.34889024
+    k_h = 0.40146017
+    k_ch4 = 2.44629
+    alpha_h = 0.98122561
+    alpha_ch4 = 0.94425982
+
     # Build up the complicated formula for efficiency (Valek scem_eff(E), see above) in a vectorized way without wasting memory.
     # Helium has a charge of 2 while all the others have a charge of 1.
     ret = np.sqrt(2*(ee + scem_voltage)/1000.0, where=(~He_mask))
@@ -194,14 +198,19 @@ def Aeff(ee, mrat, scem_voltage=2400.):
     np.divide(ret, np.sqrt(16), where=CH4_mask, out=ret)
     np.divide(ret, np.sqrt(28), where=N2_mask, out=ret)
 
-    np.power(ret, IDL.h_parms[1],  where=(H_mask   | He_mask), out=ret)
-    np.power(ret, IDL.n2_parms[1], where=(CH4_mask | N2_mask), out=ret)
+    #np.power(ret, IDL.h_parms[1],  where=(H_mask   | He_mask), out=ret)
+    #np.power(ret, IDL.n2_parms[1], where=(CH4_mask | N2_mask), out=ret)
+    np.power(ret, alpha_h,  where=(H_mask   | He_mask), out=ret)
+    np.power(ret, alpha_ch4, where=(CH4_mask | N2_mask), out=ret)
 
-    np.multiply(IDL.h_parms[0],  ret, where=(H_mask   | He_mask), out=ret)
-    np.multiply(IDL.n2_parms[0], ret, where=(CH4_mask | N2_mask), out=ret)
+    #np.multiply(IDL.h_parms[0],  ret, where=(H_mask   | He_mask), out=ret)
+    #np.multiply(IDL.n2_parms[0], ret, where=(CH4_mask | N2_mask), out=ret)
+    np.multiply(k_h,  ret, where=(H_mask   | He_mask), out=ret)
+    np.multiply(k_ch4, ret, where=(CH4_mask | N2_mask), out=ret)
 
-    np.power(1.0 - IDL.h_parms[2],  ret, where=(H_mask   | He_mask), out=ret)
-    np.power(1.0 - IDL.n2_parms[2], ret, where=(CH4_mask | N2_mask), out=ret)
+    #np.power(1.0 - IDL.h_parms[2],  ret, where=(H_mask   | He_mask), out=ret)
+    #np.power(1.0 - IDL.n2_parms[2], ret, where=(CH4_mask | N2_mask), out=ret)
+    np.power(1.0 - pe,  ret, out=ret)
 
     np.subtract(1.0, ret, out=ret)
 
@@ -235,8 +244,17 @@ def spectrum(v, mrat, n, o):
 
     return np.histogram(eq, bin_edges, weights=counts)[0]
 
-def spectrogram(x, v, mrat, beta, points, orientations, radius=1187., progress=False):
+def spectrogram(x, v, mrat, beta, points, orientations, radius=None, volume=None, progress=False):
     """The spectrogram is built out of a spectrum for each given point in space"""
+    mutually_exclusive_args = [radius, volume]
+    if mutually_exclusive_args.count(None) != 1:
+        raise TypeError("Only provide one of radius or volume")
+    if radius is not None:
+        print 'Warining: radius is depreciated'
+        volume = (4./3.)*np.pi*radius**3
+
+
+
     ret = np.empty((points.shape[0], bin_edges.shape[0]-1), dtype=np.float64)
 
     if len(x) == 0:
@@ -248,21 +266,30 @@ def spectrogram(x, v, mrat, beta, points, orientations, radius=1187., progress=F
 
     kdparts  = spatial.cKDTree(x)
     kdpoints = spatial.cKDTree(points)
-    local = kdpoints.query_ball_tree(kdparts, radius)
+    effective_radius = volume**(1./3.)/2.
+    radius_enhancement = 4
+    enhanced_radius = effective_radius*radius_enhancement
+    enhanced_volume = (2.0*enhanced_radius)**3.0
+    local = kdpoints.query_ball_tree(kdparts, enhanced_radius, p=np.inf)
 
-    dV = (4./3.)*np.pi*radius**3
+    # Since we ignore particle weighting we need to correct counts by a certain factor
+    # assuming particles are uniformly distributed within the cell volume.
+    # We also assume the same cell volume throughout.
+    effective_volume = enhanced_volume/8.0
 
     for i, l in enumerate(local):
         if progress:
             printProgressBar(len(local)+i, 2*len(local))
-        ret[i, :] = spectrum(v[l], mrat[l], 1./(dV*beta[l]), orientations[i])
+        ret[i, :] = spectrum(v[l], mrat[l], 1./(effective_volume*beta[l]), orientations[i])
 
     if progress:
         printProgressBar(1,1)
 
     return ret
 
-def spectrograms_by_species(x,v,mrat,beta,points,orientations, radius=1187., progress=False):
+def spectrograms_by_species(x,v,mrat,beta,points,orientations, radius=None, volume=(1187./2)**3, progress=False):
+    if radius is not None:
+        raise TypeError("Don't use radius, use volume instead")
     H_xp = x[mrat == 1.]
     H_v = v[mrat == 1.]
     H_beta = beta[mrat == 1.]
@@ -278,8 +305,35 @@ def spectrograms_by_species(x,v,mrat,beta,points,orientations, radius=1187., pro
     CH4_beta = beta[mrat == 1./16.]
     CH4_mrat = mrat[mrat == 1./16.]
 
-    H_spec = spectrogram(H_xp, H_v, H_mrat, H_beta, points, orientations, radius, progress)
-    He_spec = spectrogram(He_xp, He_v, He_mrat, He_beta, points, orientations, radius, progress)
-    CH4_spec = spectrogram(CH4_xp, CH4_v, CH4_mrat, CH4_beta, points, orientations, radius, progress)
+    H_spec = spectrogram(H_xp, H_v, H_mrat, H_beta, points, orientations, volume=volume, progress=progress)
+    He_spec = spectrogram(He_xp, He_v, He_mrat, He_beta, points, orientations, volume=volume, progress=progress)
+    CH4_spec = spectrogram(CH4_xp, CH4_v, CH4_mrat, CH4_beta, points, orientations, volume=volume, progress=progress)
 
     return [H_spec, He_spec, CH4_spec]
+
+def single_spectrum_by_tag(v, mrat, beta, tags, orientation, volume):
+
+    tag_spectrums = {}
+    for tag in np.unique(tags):
+        tagged_v = v[tags == tag]
+        tagged_beta = beta[tags == tag]
+        tagged_mrat = mrat[tags == tag]
+
+        # Since we ignore particle weighting we need to correct counts by a certain factor
+        # assuming particles are uniformly distributed within the cell volume
+        effective_volume = volume/8.0
+
+        tag_spectrums[tag] = spectrum(tagged_v, tagged_mrat, 1./(effective_volume*tagged_beta), orientation)
+
+    return tag_spectrums
+
+def spectrograms_by_tag(x,v,mrat,beta,points,tags,orientations, radius=1187., progress=False):
+    tag_spectrograms = {}
+    for tag in np.unique(tags):
+        tagged_x = x[tags == tag]
+        tagged_v = v[tags == tag]
+        tagged_beta = beta[tags == tag]
+        tagged_mrat = mrat[tags == tag]
+        tag_spectrograms[tag] = spectrogram(tagged_x, tagged_v, tagged_mrat, tagged_beta, points, orientations, radius, progress)
+
+    return tag_spectrograms

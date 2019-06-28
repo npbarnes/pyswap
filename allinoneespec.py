@@ -5,18 +5,19 @@ from matplotlib.figure import figaspect
 from espec import get_espec, three_colorbars, plot_espec
 import argparse
 
+def imftype(s):
+    if s is None:
+        return ''
+    else:
+        return s + 'nT IMF'
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--mccomas', action='store_true')
 parser.add_argument('--hybrid-folder', dest='hybrid_folder', default=None)
 parser.add_argument('--prefix', default='data')
-parser.add_argument('--imf')
+parser.add_argument('--imf', type=imftype)
 
 args = parser.parse_args()
-
-if args.imf is None:
-    args.imf = ''
-else:
-    args.imf = '\n' + args.imf
 
 if args.hybrid_folder is None:
     args.data_folder = os.path.join(os.getcwd(), args.prefix)
