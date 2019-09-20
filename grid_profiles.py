@@ -179,18 +179,18 @@ def plot_profile(ax, profiles, labels=[], mccomas=False):
         line.set_label(label)
 
 def figure_setup(num_subplots, aspect, scale=1):
-    plt.style.use('pluto-paper')
+    #plt.style.use('pluto-paper')
     fig, axs = plt.subplots(nrows=num_subplots, sharex=True, gridspec_kw={'hspace':0}, figsize=[scale*dim for dim in figaspect(num_subplots*aspect)])
     if num_subplots == 1:
         axs = [axs]
     return fig, axs
 
-shell_prefixes = ['/home/nathan/data/2017-Mon-Nov-13/pluto-7/data',
-                '/home/nathan/data/2018-Fri-Jan-26/pluto-1/data',
-                '/home/nathan/data/2017-Mon-Nov-13/pluto-8/data']
-no_shell_prefixes = ['/home/nathan/data/2018-Mon-Jul-09/pluto-1/data',
-                    '/home/nathan/data/2018-Thu-Jul-05/pluto-1/data',
-                    '/home/nathan/data/2018-Thu-Jul-19/pluto-1/data']
+shell_prefixes = ['/home/nathan/data/pre-2019/2017-Mon-Nov-13/pluto-7/data',
+                '/home/nathan/data/pre-2019/2018-Fri-Jan-26/pluto-1/data',
+                '/home/nathan/data/pre-2019/2017-Mon-Nov-13/pluto-8/data']
+no_shell_prefixes = ['/home/nathan/data/pre-2019/2018-Mon-Jul-09/pluto-1/data',
+                    '/home/nathan/data/pre-2019/2018-Thu-Jul-05/pluto-1/data',
+                    '/home/nathan/data/pre-2019/2018-Thu-Jul-19/pluto-1/data']
 shell_labels = ['IMF: 0.3 nT, with IPUIs', 'IMF: 0.19 nT, with IPUIs', 'IMF: 0.08 nT, with IPUIs'] 
 no_shell_labels = ['IMF: 0.3 nT, without IPUIs', 'IMF: 0.19 nT, without IPUIs', 'IMF: 0.08 nT, without IPUIs']
 generic_labels = ['IMF: 0.3 nT','IMF: 0.19 nT','IMF: 0.08 nT']

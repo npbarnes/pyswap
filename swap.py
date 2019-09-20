@@ -9,18 +9,7 @@ from bisect import bisect_right
 from astropy.io import fits
 from datetime import datetime
 
-# Importing idlpy sets the working directory to the home directory for
-# both Python and IDL interpreters.
-# These lines are a workaround to unstupid that behavior.
-cwd = os.getcwd()
-from idlpy import IDL # noqa
-os.chdir(cwd)
-IDL.cd(cwd)
-
-# Load SWAP calibration information
-IDL.restore('/home/nathan/Code/swap/fin_arr_ebea_ang_eb_bg_corr.sav')
-IDL.restore('/home/nathan/Code/swap/w_phi.sav')
-IDL.restore('/home/nathan/Code/swap/prob_scem_parm.sav')
+calib = np.load('/home/nathan/Code/swap/swap_calibration_data.npz')
 
 encounter_folder = '/home/nathan/Code/swap/nh-p-swap-3-pluto-v3.0/data'
 cruise_folder = '/home/nathan/Code/swap/nh-x-swap-3-plutocruise-v3.0/data'
@@ -41,7 +30,7 @@ def readbins():
     bin_edges   = np.array(bin_edges[::-1])
     return bin_centers, bin_edges
 
-def extract_spectrogram(fit_file, preprocess='simple'):
+def extract_spectrogram(fit_file, preprocess='simple_spectra'):
     if preprocess == 'start_stop':
         pcem = np.zeros((fit_file['pcem_spect_hz'].data.shape[0], 2*fit_file['pcem_spect_hz'].data.shape[1]))
         scem = np.zeros_like(pcem)
@@ -90,7 +79,7 @@ def _find_nearest_before(folders, target_date):
 def find_fit_file(start_et):
     start_date = et2pydatetime(start_et)
 
-    if start_date < datetime(year=2015, month=01, day=15):
+    if start_date < datetime(year=2015, month=1, day=15):
         mission_phase = cruise_folder
     else:
         mission_phase = encounter_folder
@@ -104,7 +93,7 @@ def find_fit_file(start_et):
 
     return fits.open(data_file)
 
-def find_spectrogram(start_et, preprocess='simple'):
+def find_spectrogram(start_et, preprocess='simple_spectra'):
     return extract_spectrogram( find_fit_file(start_et), preprocess=preprocess)
 
 
@@ -123,7 +112,7 @@ def is_sunview(o, tolerance=5.):
 
 def p(phi):
     """Phi dependance of the SWAP response"""
-    return np.interp(phi, IDL.wphi['PHI'], IDL.wphi['W'], left=0., right=0.)
+    return np.interp(phi, calib['PHI'], calib['W'], left=0., right=0.)
 
 def Eoverq(v,mrat):
     """Compute energy per charge from velocity and mass ratio (q/m)"""
@@ -148,11 +137,11 @@ def E(Eoverq, mrat):
     return ret
 
 
-azimuth_lab = IDL.s4['X']
+azimuth_lab = calib['X']
 theta_lab = -azimuth_lab
-y = IDL.s4['Y'].transpose() # transpose for row-major/column-major conversion
-arr = IDL.s4['ARR'].transpose() # transpose for row-major/column-major conversion
-ecen = IDL.s4['ECEN']
+y = calib['Y'].transpose() # transpose for row-major/column-major conversion
+arr = calib['ARR'].transpose() # transpose for row-major/column-major conversion
+ecen = calib['ECEN']
 def w(ee,theta):
     """Velocity and theta dependance of the SWAP response expressed in terms of energy
     instead of velocity.
@@ -198,18 +187,12 @@ def Aeff(ee, mrat, scem_voltage=2400.):
     np.divide(ret, np.sqrt(16), where=CH4_mask, out=ret)
     np.divide(ret, np.sqrt(28), where=N2_mask, out=ret)
 
-    #np.power(ret, IDL.h_parms[1],  where=(H_mask   | He_mask), out=ret)
-    #np.power(ret, IDL.n2_parms[1], where=(CH4_mask | N2_mask), out=ret)
     np.power(ret, alpha_h,  where=(H_mask   | He_mask), out=ret)
     np.power(ret, alpha_ch4, where=(CH4_mask | N2_mask), out=ret)
 
-    #np.multiply(IDL.h_parms[0],  ret, where=(H_mask   | He_mask), out=ret)
-    #np.multiply(IDL.n2_parms[0], ret, where=(CH4_mask | N2_mask), out=ret)
     np.multiply(k_h,  ret, where=(H_mask   | He_mask), out=ret)
     np.multiply(k_ch4, ret, where=(CH4_mask | N2_mask), out=ret)
 
-    #np.power(1.0 - IDL.h_parms[2],  ret, where=(H_mask   | He_mask), out=ret)
-    #np.power(1.0 - IDL.n2_parms[2], ret, where=(CH4_mask | N2_mask), out=ret)
     np.power(1.0 - pe,  ret, out=ret)
 
     np.subtract(1.0, ret, out=ret)
@@ -250,7 +233,7 @@ def spectrogram(x, v, mrat, beta, points, orientations, radius=None, volume=None
     if mutually_exclusive_args.count(None) != 1:
         raise TypeError("Only provide one of radius or volume")
     if radius is not None:
-        print 'Warining: radius is depreciated'
+        print('Warining: radius is depreciated')
         volume = (4./3.)*np.pi*radius**3
 
 
