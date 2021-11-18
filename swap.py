@@ -153,7 +153,7 @@ def w(ee,theta):
     bin_energies=y[iee,:]*ee[:,np.newaxis]
 
     ret = np.empty(ee.shape[0], dtype=np.float64)
-    for i in xrange(ret.shape[0]):
+    for i in range(ret.shape[0]):
         ret[i] = np.interp(ee[i], bin_energies[i], arr[:,itheta[i],iee[i]], left=0., right=0.)
 
     return ret

@@ -158,7 +158,6 @@ def RH2a_profiler(hf, step=-1):
     ux = vx_profiler(hf, step=step)
 
     A_profile = rho/P * ux**2
-    print A_profile
 
     b_pressure = magnetic_pressure_profiler(hf, step=step)
 
